@@ -1,0 +1,25 @@
+.DS_Store
+
+# node
+node_modules
+npm-debug.log
+.env
+
+# app
+*.nginx.conf
+
+# docs
+docs
+
+# IDE
+.idea
+.vscode
+
+*.sublime-project
+*.sublime-workspace
+
+sftp-config.json
+sftp-settings.json
+
+# agentx
+agentx-conf.json
