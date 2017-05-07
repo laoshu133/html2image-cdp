@@ -4,6 +4,7 @@
   "description": "A screenshot server base on Chrome Debugging Protocol interface",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon --ignore tests index.js",
     "test": "npm test"
   },
   "repository": {
@@ -17,5 +18,14 @@
     "image"
   ],
   "author": "xiaomi",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "chrome-remote-interface": "^0.22.0",
+    "debug": "^2.6.6",
+    "dotenv-safe": "^4.0.4",
+    "fs-promise": "^2.0.3",
+    "hlg-logger": "0.0.6",
+    "lodash": "^4.17.4"
+  }
 }
