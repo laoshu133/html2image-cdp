@@ -1,0 +1,21 @@
+{
+  "name": "html2image-cdp",
+  "version": "0.0.1",
+  "description": "A screenshot server base on Chrome Debugging Protocol interface",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@git.huanleguang.com:static/html2image-cdp.git"
+  },
+  "keywords": [
+    "chrome",
+    "screenshot",
+    "html",
+    "image"
+  ],
+  "author": "xiaomi",
+  "license": "MIT"
+}
