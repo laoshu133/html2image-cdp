@@ -39,7 +39,7 @@ app.router = new Router();
 
 // controllers
 require('./controllers/index').forEach(ctrlFactory => {
-    ctrlFactory(app, app.router);
+    ctrlFactory(app.router, app);
 });
 
 // use routers

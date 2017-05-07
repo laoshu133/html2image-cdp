@@ -5,7 +5,7 @@
 
 const bridge = require('../bridge');
 
-module.exports = function(app, router) {
+module.exports = function(router) {
     const prettyDate = function(date) {
         const rSingleNum = /\b(\d)\b/g;
 
