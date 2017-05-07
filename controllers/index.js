@@ -3,7 +3,7 @@
  */
 
 module.exports = [
-    // require('./main'),
+    require('./main'),
     require('./file'),
     require('./status'),
     require('./clean')
