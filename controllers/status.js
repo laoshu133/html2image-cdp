@@ -20,7 +20,7 @@ module.exports = function(router) {
             startTimePretty: prettyMs(serverStartTime),
             startTime: serverStartTime,
             uptime: Date.now() - serverStartTime,
-            currentTargets: yield bridge.syncTargets()
+            currentTargets: yield bridge.getTargets()
         };
 
         this.body = data;
