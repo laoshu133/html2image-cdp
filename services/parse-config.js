@@ -30,12 +30,14 @@ const getLocalConfigPromise = Promise.try(() => {
 let uuid = 0;
 
 module.exports = function(cfg) {
-    return getLocalConfigPromise()
+    return Promise.try(() => {
+        return getLocalConfigPromise;
+    })
     .then(localCfg => {
         return lodash.merge({}, localCfg, cfg);
     })
     .then(cfg => {
-        const action = cfg.action || 'shot';
+        const action = cfg.action || 'makeshot';
 
         // id
         if(!cfg.id) {

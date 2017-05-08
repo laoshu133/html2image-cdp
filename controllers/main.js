@@ -48,7 +48,7 @@ module.exports = function(router) {
         // covert result (local path -> url)
         const result = {
             id: cfg.id,
-            image: pathToUrl(ret.image),
+            image: null,
             images: lodash.map(ret.images, pathToUrl),
             metadata: ret.metadata || null,
             // elapsed
@@ -57,6 +57,7 @@ module.exports = function(router) {
 
         if(ret.images) {
             result.images = ret.images.map(pathToUrl);
+            result.image = result.images[0] || null;
         }
 
         this.body = result;

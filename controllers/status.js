@@ -3,7 +3,7 @@
  *
  */
 
-const bridge = require('../bridge');
+const bridge = require('../services/bridge');
 const prettyDate = require('../services/pretty-date');
 
 const prettyMs = function(ms) {
