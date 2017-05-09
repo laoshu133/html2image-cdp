@@ -9,6 +9,7 @@ const fsp = require('fs-promise');
 const Promise = require('bluebird');
 
 const cpuCount = require('os').cpus().length;
+const pathToUrl = require('../services/path-to-url');
 const bridge = require('../services/bridge');
 const wait = require('../lib/wait-promise');
 
@@ -56,9 +57,16 @@ const makeshot = function(cfg, hooks) {
         .timeout(CDP_CLIENT_REQUEST_TIMEOUT, 'Request client timeout');
     })
     .then(() => {
+        const rAbsUrl = /^\w+:\/\//;
+
+        let url = cfg.url;
+        if(!rAbsUrl.test(url)) {
+            url = pathToUrl(url);
+        }
+
         clientInited = true;
 
-        return bridge.openPage(cfg.url, {
+        return bridge.openPage(url, {
             viewport: {
                 height: cfg.viewport[1],
                 width: cfg.viewport[0]

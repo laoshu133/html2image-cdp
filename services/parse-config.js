@@ -10,7 +10,7 @@ const Promise = require('bluebird');
 const fill = require('../lib/fill');
 const prettyDate = require('./pretty-date');
 
-const SHOT_HTML_TPL_PATH = path.resolve(__dirname, process.env.SHOT_HTML_TPL_PATH);
+const SHOT_HTML_TPL_PATH = path.resolve(__dirname, '..', process.env.SHOT_HTML_TPL_PATH);
 
 // default, local config
 const defaultConfig = require('../config.default');
