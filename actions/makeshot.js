@@ -17,10 +17,15 @@ const CDP_CLIENT_MAX_COUNT = +env.CDP_CLIENT_MAX_COUNT || 10;
 const CDP_CLIENT_REQUEST_TIMEOUT = +env.CDP_CLIENT_REQUEST_TIMEOUT || 10000;
 
 const shotCounts = {
-    total: 0,
     success: 0,
     error: 0
 };
+Object.defineProperty(shotCounts, 'total', {
+    enumerable: true,
+    get() {
+        return shotCounts.success + shotCounts.error;
+    }
+});
 
 const makeshot = function(cfg, hooks) {
     let client = null;
@@ -51,7 +56,6 @@ const makeshot = function(cfg, hooks) {
         .timeout(CDP_CLIENT_REQUEST_TIMEOUT);
     })
     .then(() => {
-        shotCounts.total += 1;
         clientInited = true;
 
         return bridge.openPage(cfg.url);
