@@ -58,7 +58,12 @@ const makeshot = function(cfg, hooks) {
     .then(() => {
         clientInited = true;
 
-        return bridge.openPage(cfg.url);
+        return bridge.openPage(cfg.url, {
+            viewport: {
+                height: cfg.viewport[1],
+                width: cfg.viewport[0]
+            }
+        });
     })
     .tap(clt => {
         client = clt;
