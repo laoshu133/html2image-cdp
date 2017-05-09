@@ -53,7 +53,7 @@ const makeshot = function(cfg, hooks) {
             bridge.on('client.close', resolve);
             bridge.on('client.error', reject);
         })
-        .timeout(CDP_CLIENT_REQUEST_TIMEOUT);
+        .timeout(CDP_CLIENT_REQUEST_TIMEOUT, 'Request client timeout');
     })
     .then(() => {
         clientInited = true;

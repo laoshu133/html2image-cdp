@@ -16,13 +16,17 @@ module.exports = function(router) {
     const serverStartTime = Date.now();
 
     router.get('/status', function *() {
+        const targets = yield bridge.getTargets();
+
         const data = {
             host: process.env.WWW_HOST,
             startTimePretty: prettyMs(serverStartTime),
             startTime: serverStartTime,
             uptime: Date.now() - serverStartTime,
             shotCounts: makeshot.shotCounts,
-            currentTargets: yield bridge.getTargets()
+            clientCount: bridge.clientCount,
+            targetCount: targets.length,
+            currentTargets: targets
         };
 
         this.body = data;
