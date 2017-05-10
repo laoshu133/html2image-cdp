@@ -11,6 +11,7 @@ const Promise = require('bluebird');
 const cpuCount = require('os').cpus().length;
 const pathToUrl = require('../services/path-to-url');
 const bridge = require('../services/bridge');
+const logger = require('../services/logger');
 const wait = require('../lib/wait-promise');
 
 const env = process.env;
@@ -32,6 +33,14 @@ const makeshot = function(cfg, hooks) {
     let client = null;
     let clientInited = false;
 
+    const traceInfo = function(type) {
+        const msg = `Makeshot.${type}`;
+
+        return logger.info(msg, {
+            shot_id: cfg.id
+        });
+    };
+
     // hooks
     hooks = lodash.defaults(hooks, {
         beforeCheck: lodash.noop,
@@ -42,6 +51,8 @@ const makeshot = function(cfg, hooks) {
     });
 
     return Promise.try(() => {
+        traceInfo('start');
+
         if(!cfg.url) {
             throw new Error('url not provided');
         }
@@ -66,6 +77,8 @@ const makeshot = function(cfg, hooks) {
 
         clientInited = true;
 
+        traceInfo('page.open');
+
         return bridge.openPage(url, {
             viewport: {
                 height: cfg.viewport[1],
@@ -75,6 +88,8 @@ const makeshot = function(cfg, hooks) {
     })
     .tap(clt => {
         client = clt;
+
+        traceInfo('page.check');
 
         // hook: beforeCheck
         return hooks.beforeCheck(cfg, client);
@@ -118,6 +133,8 @@ const makeshot = function(cfg, hooks) {
     })
     // croper rects
     .then(() => {
+        traceInfo('page.clacRects');
+
         const selector = cfg.wrapSelector;
 
         return bridge.querySelectorAllByClient(client, selector)
@@ -171,6 +188,8 @@ const makeshot = function(cfg, hooks) {
     })
     // Clac viewport
     .then(rects => {
+        traceInfo('client.clacViewport');
+
         const viewport = cfg.viewport;
         const Emulation = client.Emulation;
 
@@ -213,6 +232,8 @@ const makeshot = function(cfg, hooks) {
     .delay(Math.min(1000, cfg.renderDelay))
     // screen shot
     .then(rects => {
+        traceInfo('client.captureScreenshot');
+
         return client.Page.captureScreenshot({
             format: 'png'
         })
@@ -231,6 +252,8 @@ const makeshot = function(cfg, hooks) {
     })
     // Extract and resize image
     .then(({image, rects}) => {
+        traceInfo('client.resizeImage');
+
         const imageSize = cfg.imageSize || {};
 
         return Promise.map(rects, rect => {
@@ -279,6 +302,8 @@ const makeshot = function(cfg, hooks) {
     })
     // Optimize image
     .then(({images, rects}) => {
+        traceInfo('client.optimizeImage');
+
         const ext = path.extname(cfg.out.image);
         const imageQuality = cfg.imageQuality;
 
@@ -313,6 +338,8 @@ const makeshot = function(cfg, hooks) {
     })
     // Save images
     .then(({images, rects}) => {
+        traceInfo('client.saveImage');
+
         const out = cfg.out;
         const outPath = out.path;
         const ext = path.extname(out.image);
@@ -345,6 +372,8 @@ const makeshot = function(cfg, hooks) {
     })
     // Formar result
     .then(({imagePaths, rects}) => {
+        traceInfo('client.formatResult');
+
         const ret = lodash.clone(cfg.out);
         const metadata = ret.metadata || {};
 
