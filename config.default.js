@@ -2,7 +2,6 @@ module.exports = {
     url: null,
     content: '',
     action: 'makeshot',
-    htmlTpl: 'taobao_desc.html',
     dataType: 'json',
     renderDelay: 32,
     optimizeImage: false,
