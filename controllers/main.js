@@ -25,7 +25,8 @@ module.exports = function(router) {
         }
 
         // parse config
-        const cfg = yield parseConfig(lodash.merge({}, query, body));
+        const requestCfg = lodash.merge({}, query, body);
+        const cfg = yield parseConfig(requestCfg);
 
         let ret = null;
         if(actions[cfg.action]) {

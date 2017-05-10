@@ -27,7 +27,7 @@
     "fs-promise": "^2.0.3",
     "hlg-logger": "0.0.6",
     "koa": "^1.4.0",
-    "koa-bodyparser": "^4.2.0",
+    "koa-bodyparser": "^2.5.0",
     "koa-favicon": "^1.2.1",
     "koa-onerror": "^3.1.0",
     "koa-router": "^5.4.1",

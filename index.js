@@ -19,6 +19,9 @@ const logger = require('./services/logger');
 const app = new Koa();
 app.proxy = true;
 
+// parse request body
+app.use(require('koa-bodyparser')());
+
 // 404
 app.use(function *(next) {
     yield * next;
