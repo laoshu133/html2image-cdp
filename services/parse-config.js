@@ -60,8 +60,8 @@ module.exports = function(cfg) {
             viewport = viewport.replace(/[[\]]/, '').split(',');
         }
         cfg.viewport = [
-            +viewport[0] || 1920,
-            +viewport[1] || 1200
+            +viewport[0] || 800,
+            +viewport[1] || 600
         ];
 
         // Fix imageSize
