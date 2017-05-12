@@ -15,6 +15,8 @@ const logger = require('../services/logger');
 const wait = require('../lib/wait-promise');
 
 const env = process.env;
+const MAX_IMAGE_WIDTH = +env.MAX_IMAGE_HEIGHT || 5000;
+const MAX_IMAGE_HEIGHT = +env.MAX_IMAGE_HEIGHT || 5000;
 const CDP_CLIENT_MAX_COUNT = +env.CDP_CLIENT_MAX_COUNT || 10;
 const CDP_CLIENT_REQUEST_TIMEOUT = +env.CDP_CLIENT_REQUEST_TIMEOUT || 10000;
 
@@ -37,7 +39,9 @@ const makeshot = function(cfg, hooks) {
         const msg = `Makeshot.${type}`;
 
         return logger.info(msg, {
-            shot_id: cfg.id
+            selector: cfg.wrapSelector,
+            shot_id: cfg.id,
+            url: cfg.url
         });
     };
 
@@ -186,8 +190,11 @@ const makeshot = function(cfg, hooks) {
     .filter((rect, idx) => {
         return !cfg.wrapMaxCount || idx < cfg.wrapMaxCount;
     })
+    // delay render
+    .delay(Math.min(1000, cfg.renderDelay))
+
     // Clac viewport
-    .then(rects => {
+    .tap(rects => {
         traceInfo('client.clacViewport');
 
         const viewport = cfg.viewport;
@@ -196,194 +203,212 @@ const makeshot = function(cfg, hooks) {
         let viewWidth = viewport[0];
         let viewHeight = viewport[1];
 
+        // x use right, y use height by elem.scrollIntoView
         rects.forEach(rect => {
             if(rect.right > viewWidth) {
                 viewWidth = rect.right;
             }
-            if(rect.bottom > viewHeight) {
-                viewHeight = rect.bottom;
+            if(rect.height > viewHeight) {
+                viewHeight = rect.height;
             }
         });
 
-        // Ensure rect in viewport
-        let promise = Promise.resolve();
-        if(viewWidth !== viewport[0] || viewHeight !== viewport[1]) {
-            promise = Emulation.setVisibleSize({
-                height: viewHeight,
-                width: viewWidth
-            });
+        if(viewWidth > MAX_IMAGE_WIDTH || viewHeight > MAX_IMAGE_HEIGHT) {
+            throw new Error(`Request Image size is out of limit: ${MAX_IMAGE_WIDTH}x${MAX_IMAGE_WIDTH}`);
         }
 
-        // https://medium.com/@dschnr/using-headless-chrome-as-an-automated-screenshot-tool-4b07dffba79a
-        // This forceViewport call ensures that content outside the viewport is
-        // rendered, otherwise it shows up as grey. Possibly a bug?
-        return promise.then(() => {
-            return Emulation.forceViewport({
-                scale: 1,
-                x: 0,
-                y: 0
-            });
+        return Promise.try(() => {
+            if(viewWidth > viewport[0] || viewHeight > viewport[1]) {
+                return Emulation.setVisibleSize({
+                    viewHeight: Math.max(viewHeight, viewport[1]),
+                    viewWidth: Math.max(viewWidth, viewport[0])
+                });
+            }
         })
         .then(() => {
-            return rects;
+            // // https://medium.com/@dschnr/using-headless-chrome-as-an-automated-screenshot-tool-4b07dffba79a
+            // // This forceViewport call ensures that content outside the viewport is
+            // // rendered, otherwise it shows up as grey. Possibly a bug?
+            // return promise.then(() => {
+            //     return Emulation.forceViewport({
+            //         scale: 1,
+            //         x: 0,
+            //         y: 0
+            //     });
+            // })
+            // .then(() => {
+            //     return rects;
+            // });
         });
     })
-    // delay render
-    .delay(Math.min(1000, cfg.renderDelay))
-    // screen shot
-    .then(rects => {
-        traceInfo('client.captureScreenshot');
 
-        return client.Page.captureScreenshot({
-            format: 'png'
+    // Focus element and Screenshot
+    .mapSeries((rect, idx) => {
+        traceInfo('client.captureScreenshot-' + idx);
+
+        const Runtime = client.Runtime;
+        const Page = client.Page;
+        const ret = {
+            xOffset: rect.left,
+            yOffset: rect.top,
+            rect
+        };
+
+        return Runtime.evaluate({
+            expression: `
+                var elems = document.querySelectorAll('${cfg.wrapSelector}');
+                var elem = elems[${idx}];
+                var ret = 0;
+
+                if(elem) {
+                    elem.scrollIntoView(true);
+
+                    ret = pageYOffset;
+                };
+
+                ret;
+            `
+        })
+        .then(({result}) => {
+            // Fix page y offset
+            ret.yOffset -= +result.value || 0;
+
+            return Page.captureScreenshot({
+                format: 'png'
+            });
         })
         .then(({data}) => {
-            return {
-                image: new Buffer(data, 'base64'),
-                rects: rects
-            };
+            ret.image = new Buffer(data, 'base64');
+
+            return ret;
         });
     })
     // clean
     .finally(() => {
         if(client) {
+            traceInfo('client.close');
+
             return client.close();
         }
     })
-    // Extract and resize image
-    .then(({image, rects}) => {
-        traceInfo('client.resizeImage');
-
+    .tap(() => {
+        traceInfo('client.extractImage');
+    })
+    // Extract image
+    .map(({image, rect, xOffset, yOffset}) => {
         const imageSize = cfg.imageSize || {};
 
-        return Promise.map(rects, rect => {
-            let img = sharp(image).extract({
-                height: rect.height,
-                width: rect.width,
-                left: rect.left,
-                top: rect.top
-            });
+        image = sharp(image).extract({
+            height: rect.height,
+            width: rect.width,
+            left: xOffset,
+            top: yOffset
+        });
 
-            const imageWidth = +imageSize.width || null;
-            const imageHeight = +imageSize.height || null;
-            if(imageWidth || imageHeight) {
-                const cropStrategies = sharp.gravity;
-                const oldStrategiesMap = {
-                    10: cropStrategies.north,
-                    11: cropStrategies.northwest,
-                    12: cropStrategies.northeast
-                };
+        const imageWidth = +imageSize.width || null;
+        const imageHeight = +imageSize.height || null;
+        if(imageWidth || imageHeight) {
+            const cropStrategies = sharp.gravity;
+            const oldStrategiesMap = {
+                10: cropStrategies.north,
+                11: cropStrategies.northwest,
+                12: cropStrategies.northeast
+            };
 
-                let strategy = imageSize.type || imageSize.strategy;
+            let strategy = imageSize.type || imageSize.strategy;
 
-                strategy = oldStrategiesMap[strategy] || cropStrategies[strategy];
-                if(!strategy) {
-                    strategy = cropStrategies.north;
-                }
-
-                img = img.resize(imageWidth, imageHeight);
-                img = img.crop(strategy);
+            strategy = oldStrategiesMap[strategy] || cropStrategies[strategy];
+            if(!strategy) {
+                strategy = cropStrategies.north;
             }
 
-            return img;
-        }, {
-            concurrency: cpuCount
-        })
-        .then(images => {
-            return {
-                images,
-                rects
-            };
-        });
+            image = image.resize(imageWidth, imageHeight);
+            image = image.crop(strategy);
+        }
+
+        return { image, rect };
+    }, {
+        concurrency: cpuCount
     })
     // hooks: beforeOptimize
     .tap(() => {
+        traceInfo('client.optimizeImage');
+
         return hooks.beforeOptimize(cfg);
     })
     // Optimize image
-    .then(({images, rects}) => {
-        traceInfo('client.optimizeImage');
-
+    .map(({image, rect}) => {
         const ext = path.extname(cfg.out.image);
         const imageQuality = cfg.imageQuality;
 
-        return Promise.map(images, img => {
-            if(ext === '.png') {
-                img = img.png({
-                    compressionLevel: Math.floor(imageQuality / 100),
-                    progressive: false
-                });
-            }
-            else {
-                img = img.jpeg({
-                    quality: imageQuality,
-                    progressive: false
-                });
-            }
+        if(ext === '.png') {
+            image = image.png({
+                compressionLevel: Math.floor(imageQuality / 100),
+                progressive: false
+            });
+        }
+        else {
+            image = image.jpeg({
+                quality: imageQuality,
+                progressive: false
+            });
+        }
 
-            return img;
-        }, {
-            concurrency: cpuCount
-        })
-        .then(images => {
-            return {
-                images,
-                rects
-            };
-        });
+        return { image, rect };
+    }, {
+        concurrency: cpuCount
     })
     // hooks: afterOptimize
     .tap(() => {
         return hooks.afterOptimize(cfg);
     })
     // Save images
-    .then(({images, rects}) => {
+    .tap(() => {
         traceInfo('client.saveImage');
 
+        return fsp.ensureDir(cfg.out.path);
+    })
+    .map(({image, rect}, idx) => {
         const out = cfg.out;
-        const outPath = out.path;
         const ext = path.extname(out.image);
         const name = path.basename(out.image, ext);
+        const outName = name + (idx > 0 ? '-' + (idx + 1) : '');
+        const imagePath = path.join(out.path, `${outName}${ext}`);
 
-        return Promise.try(() => {
-            return fsp.ensureDir(outPath);
-        })
-        .then(() => images)
-        .map((img, idx) => {
-            const outName = name + (idx > 0 ? '-' + (idx + 1) : '');
-            const outPath = path.join(out.path, `${outName}${ext}`);
-
-            return img.toFile(outPath)
-            .then(() => {
-                return outPath;
-            });
-        })
-        .then(imagePaths => {
+        return image.toFile(imagePath)
+        .then(() => {
             return {
-                imagePaths,
-                images,
-                rects
+                imagePath,
+                image,
+                rect
             };
         });
+    }, {
+        concurrency: cpuCount
     })
     // hooks: afterShot
     .tap(data => {
         return hooks.afterShot(cfg, data);
     })
+
     // Formar result
-    .then(({imagePaths, rects}) => {
+    .then(items => {
         traceInfo('client.formatResult');
 
         const ret = lodash.clone(cfg.out);
-        const metadata = ret.metadata || {};
 
-        // Assign crops
-        metadata.crops = rects;
+        const images = ret.images = [];
+        const metadata = ret.metadata = {};
+        const crops = metadata.crops = [];
 
-        ret.images = imagePaths;
-        ret.metadata = metadata;
+        items.forEach(item => {
+            images.push(item.imagePath);
+            crops.push(item.rect);
+        });
 
         return ret;
+    }, {
+        concurrency: cpuCount
     })
 
     // Count
