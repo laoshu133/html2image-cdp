@@ -221,8 +221,8 @@ const makeshot = function(cfg, hooks) {
         return Promise.try(() => {
             if(viewWidth > viewport[0] || viewHeight > viewport[1]) {
                 return Emulation.setVisibleSize({
-                    viewHeight: Math.max(viewHeight, viewport[1]),
-                    viewWidth: Math.max(viewWidth, viewport[0])
+                    height: Math.max(viewHeight, viewport[1]),
+                    width: Math.max(viewWidth, viewport[0])
                 });
             }
         })
@@ -230,15 +230,10 @@ const makeshot = function(cfg, hooks) {
             // // https://medium.com/@dschnr/using-headless-chrome-as-an-automated-screenshot-tool-4b07dffba79a
             // // This forceViewport call ensures that content outside the viewport is
             // // rendered, otherwise it shows up as grey. Possibly a bug?
-            // return promise.then(() => {
-            //     return Emulation.forceViewport({
-            //         scale: 1,
-            //         x: 0,
-            //         y: 0
-            //     });
-            // })
-            // .then(() => {
-            //     return rects;
+            // return Emulation.forceViewport({
+            //     scale: 1,
+            //     x: 0,
+            //     y: 0
             // });
         });
     })
