@@ -106,7 +106,8 @@ const makeshot = function(cfg, hooks) {
         const maxTTL = +process.env.SHOT_MAX_TIMEOUT | 10000;
 
         const options = {
-            timeout: Math.min(maxTTL, ttl)
+            timeout: Math.min(maxTTL, ttl),
+            interval: 100
         };
 
         return wait((resolve, reject) => {
@@ -135,7 +136,7 @@ const makeshot = function(cfg, hooks) {
     .tap(() => {
         return hooks.beforeShot(cfg, client);
     })
-    // croper rects
+    // clac rects
     .then(() => {
         traceInfo('page.clacRects');
 
