@@ -279,6 +279,8 @@ const makeshot = function(cfg, hooks) {
             });
         })
         .then(({data}) => {
+            traceInfo('client.captureScreenshot.done-' + idx);
+
             ret.image = new Buffer(data, 'base64');
 
             return ret;
