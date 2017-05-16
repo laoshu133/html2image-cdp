@@ -9,16 +9,18 @@ const fsp = require('fs-promise');
 const Promise = require('bluebird');
 
 const cpuCount = require('os').cpus().length;
+const clearTimeoutShots = require('../services/clear-timeout-shots');
 const formatColor = require('../lib/format-color');
 const bridge = require('../services/bridge');
 const logger = require('../services/logger');
 const wait = require('../lib/wait-promise');
 
 const env = process.env;
-const MAX_IMAGE_WIDTH = +env.MAX_IMAGE_WIDTH || 5000;
-const MAX_IMAGE_HEIGHT = +env.MAX_IMAGE_HEIGHT || 5000;
 const CDP_CLIENT_MAX_COUNT = +env.CDP_CLIENT_MAX_COUNT || 10;
 const CDP_CLIENT_REQUEST_TIMEOUT = +env.CDP_CLIENT_REQUEST_TIMEOUT || 10000;
+const SHOT_CLEAR_CHECK_INTERVAL = +env.SHOT_CLEAR_CHECK_INTERVAL || 100; // 每 N 次检查一次是否需要清理
+const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
+const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
 
 const shotCounts = {
     success: 0,
@@ -225,8 +227,10 @@ const makeshot = function(cfg, hooks) {
             viewport: viewport
         });
 
-        if(viewWidth > MAX_IMAGE_WIDTH || viewHeight > MAX_IMAGE_HEIGHT) {
-            throw new Error(`Request Image size is out of limit: ${MAX_IMAGE_WIDTH}x${MAX_IMAGE_HEIGHT}`);
+        if(viewWidth > SHOT_IMAGE_MAX_WIDTH || viewHeight > SHOT_IMAGE_MAX_HEIGHT) {
+            const maxSize = `${SHOT_IMAGE_MAX_WIDTH}x${SHOT_IMAGE_MAX_HEIGHT}`;
+
+            throw new Error(`Request Image size is out of limit: ${maxSize}`);
         }
 
         return Promise.try(() => {
@@ -442,6 +446,13 @@ const makeshot = function(cfg, hooks) {
     .tap(() => {
         shotCounts.success += 1;
     })
+    // Check clean
+    .tap(() => {
+        if(shotCounts.total % SHOT_CLEAR_CHECK_INTERVAL === 0) {
+            return clearTimeoutShots();
+        }
+    })
+
     .catch(err => {
         if(clientInited) {
             shotCounts.error += 1;
