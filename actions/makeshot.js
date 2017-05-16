@@ -73,27 +73,34 @@ const makeshot = function(cfg, hooks) {
         .timeout(CDP_CLIENT_REQUEST_TIMEOUT, 'Request client timeout');
     })
     .then(() => {
-        const rAbsUrl = /^\w+:\/\//;
-
-        let url = cfg.url;
-        if(!rAbsUrl.test(url)) {
-            url = pathToUrl(url);
-        }
+        traceInfo('page.open', {
+            url: cfg.url
+        });
 
         clientInited = true;
 
-        traceInfo('page.open');
-
-        return bridge.openPage(url, {
+        return bridge.openPage(cfg.url, {
             viewport: {
                 height: cfg.viewport[1],
                 width: cfg.viewport[0]
             }
         });
     })
-    .tap(clt => {
+    .then(clt => {
+        // cache
         client = clt;
 
+        // set html content
+        if(cfg.htmlContent) {
+            traceInfo('page.setHTMLContent');
+
+            return client.Page.setDocumentContent({
+                frameId: client.frameId,
+                html: cfg.htmlContent
+            });
+        }
+    })
+    .then(() => {
         traceInfo('page.check');
 
         // hook: beforeCheck
@@ -243,7 +250,8 @@ const makeshot = function(cfg, hooks) {
         });
     })
     // Set background color
-    // @TODO: 似乎无效？
+    // @TODO: 目前无效
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=689349
     .tap(() => {
         const Emulation = client.Emulation;
         const backgroundColor = {

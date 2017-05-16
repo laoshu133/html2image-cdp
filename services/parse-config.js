@@ -111,13 +111,12 @@ module.exports = function(cfg) {
             name: outDir,
             path: outPath,
             imageType: imgExt === '.png' ? 'png' : 'jpeg',
-            image: path.join(outPath, outName + imgExt),
-            html: path.join(outPath, outName + '.html')
+            image: path.join(outPath, outName + imgExt)
         };
 
         return cfg;
     })
-    // process content
+    // process url & content
     .then(cfg => {
         const rAbsUrl = /^\w+:\/\//;
         const url = cfg.url;
@@ -130,8 +129,6 @@ module.exports = function(cfg) {
         if(!cfg.content) {
             return cfg;
         }
-
-        cfg.url = path.join(cfg.out.path, 'out.html');
 
         // html tpl
         const htmlTpl = String(cfg.htmlTpl || 'default').trim();
@@ -154,9 +151,9 @@ module.exports = function(cfg) {
         .then(htmlTpl => {
             const html = fill(htmlTpl, cfg);
 
-            return fsp.outputFile(cfg.url, html);
-        })
-        .then(() => {
+            cfg.url = 'about:blank';
+            cfg.htmlContent = html;
+
             return cfg;
         });
     });
