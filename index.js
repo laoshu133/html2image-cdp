@@ -95,8 +95,8 @@ onerror(app, {
         // });
 
         this.body = `<!DOCTYPE html><html>
-            <head><meta charset="UTF-8"/><title>${err.message}-${this.status}</title></head><body>
-            <h1>${err.message}-${this.status}</h1><p><pre>${JSON.stringify(data, null, 2)}</pre></p>
+            <head><meta charset="UTF-8"/><title>${this.status} ${err.message}</title></head><body>
+            <h1>[${this.status}] ${err.message}</h1><p><pre>${JSON.stringify(data, null, 2)}</pre></p>
             </body></html>`;
     }
 });

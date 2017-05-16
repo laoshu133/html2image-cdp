@@ -10,13 +10,12 @@ const Promise = require('bluebird');
 
 const cpuCount = require('os').cpus().length;
 const formatColor = require('../lib/format-color');
-const pathToUrl = require('../services/path-to-url');
 const bridge = require('../services/bridge');
 const logger = require('../services/logger');
 const wait = require('../lib/wait-promise');
 
 const env = process.env;
-const MAX_IMAGE_WIDTH = +env.MAX_IMAGE_HEIGHT || 5000;
+const MAX_IMAGE_WIDTH = +env.MAX_IMAGE_WIDTH || 5000;
 const MAX_IMAGE_HEIGHT = +env.MAX_IMAGE_HEIGHT || 5000;
 const CDP_CLIENT_MAX_COUNT = +env.CDP_CLIENT_MAX_COUNT || 10;
 const CDP_CLIENT_REQUEST_TIMEOUT = +env.CDP_CLIENT_REQUEST_TIMEOUT || 10000;
@@ -227,7 +226,7 @@ const makeshot = function(cfg, hooks) {
         });
 
         if(viewWidth > MAX_IMAGE_WIDTH || viewHeight > MAX_IMAGE_HEIGHT) {
-            throw new Error(`Request Image size is out of limit: ${MAX_IMAGE_WIDTH}x${MAX_IMAGE_WIDTH}`);
+            throw new Error(`Request Image size is out of limit: ${MAX_IMAGE_WIDTH}x${MAX_IMAGE_HEIGHT}`);
         }
 
         return Promise.try(() => {
