@@ -17,6 +17,7 @@ module.exports = function(router) {
 
     router.get('/status', function *() {
         const targets = yield bridge.getTargets();
+        const clientVersion = yield bridge.getClientVersion();
 
         const data = {
             host: process.env.WWW_HOST,
@@ -26,6 +27,7 @@ module.exports = function(router) {
             shotCounts: makeshot.shotCounts,
             clientCount: bridge.clientCount,
             targetCount: targets.length,
+            clientVersion: clientVersion,
             currentTargets: targets
         };
 
