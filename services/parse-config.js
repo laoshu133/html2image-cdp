@@ -108,10 +108,11 @@ module.exports = function(cfg) {
         outPath = path.join(outPath, outDir);
 
         cfg.out = {
+            name: outDir,
             path: outPath,
-            dirname: outDir,
-            html: path.join(outPath, outName + '.html'),
-            image: path.join(outPath, outName + imgExt)
+            imageType: imgExt === '.png' ? 'png' : 'jpeg',
+            image: path.join(outPath, outName + imgExt),
+            html: path.join(outPath, outName + '.html')
         };
 
         return cfg;

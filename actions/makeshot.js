@@ -9,6 +9,7 @@ const fsp = require('fs-promise');
 const Promise = require('bluebird');
 
 const cpuCount = require('os').cpus().length;
+const formatColor = require('../lib/format-color');
 const pathToUrl = require('../services/path-to-url');
 const bridge = require('../services/bridge');
 const logger = require('../services/logger');
@@ -35,14 +36,14 @@ const makeshot = function(cfg, hooks) {
     let client = null;
     let clientInited = false;
 
-    const traceInfo = function(type) {
+    const traceInfo = function(type, metadata) {
         const msg = `Makeshot.${type}`;
 
-        return logger.info(msg, {
+        return logger.info(msg, lodash.assign({
             selector: cfg.wrapSelector,
             shot_id: cfg.id,
             url: cfg.url
-        });
+        }, metadata));
     };
 
     // hooks
@@ -196,8 +197,6 @@ const makeshot = function(cfg, hooks) {
 
     // Clac viewport
     .tap(rects => {
-        traceInfo('client.clacViewport');
-
         const viewport = cfg.viewport;
         const Emulation = client.Emulation;
 
@@ -212,6 +211,12 @@ const makeshot = function(cfg, hooks) {
             if(rect.height > viewHeight) {
                 viewHeight = rect.height;
             }
+        });
+
+        // log
+        traceInfo('client.setViewport', {
+            size: [viewWidth, viewHeight],
+            viewport: viewport
         });
 
         if(viewWidth > MAX_IMAGE_WIDTH || viewHeight > MAX_IMAGE_HEIGHT) {
@@ -236,6 +241,23 @@ const makeshot = function(cfg, hooks) {
             //     y: 0
             // });
         });
+    })
+    // Set background color
+    // @TODO: 似乎无效？
+    .tap(() => {
+        const Emulation = client.Emulation;
+        const backgroundColor = {
+            a: cfg.out.imageType === 'png' ? 0 : 255,
+            r: 255,
+            g: 255,
+            b: 255
+        };
+
+        traceInfo('page.setBackgorundColor', {
+            color: formatColor(backgroundColor)
+        });
+
+        return Emulation.setDefaultBackgroundColorOverride(backgroundColor);
     })
 
     // Focus element and Screenshot
@@ -274,7 +296,7 @@ const makeshot = function(cfg, hooks) {
             });
         })
         .then(({data}) => {
-            traceInfo('client.captureScreenshot.done-' + idx);
+            traceInfo('client.imageToBuffer-' + idx);
 
             ret.image = new Buffer(data, 'base64');
 
@@ -336,10 +358,10 @@ const makeshot = function(cfg, hooks) {
     })
     // Optimize image
     .map(({image, rect}) => {
-        const ext = path.extname(cfg.out.image);
+        const imageType = cfg.out.imageType;
         const imageQuality = cfg.imageQuality;
 
-        if(ext === '.png') {
+        if(imageType === 'png') {
             image = image.png({
                 compressionLevel: Math.floor(imageQuality / 100),
                 progressive: false
