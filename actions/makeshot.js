@@ -15,6 +15,7 @@ const logger = require('../services/logger');
 const wait = require('../lib/wait-promise');
 
 const env = process.env;
+const CDP_RESOURCE_REQUEST_TIMEOUT = +env.CDP_RESOURCE_REQUEST_TIMEOUT || 5000;
 const SHOT_CLEAR_CHECK_INTERVAL = +env.SHOT_CLEAR_CHECK_INTERVAL || 100; // 每 N 次检查一次是否需要清理
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
@@ -74,6 +75,26 @@ const makeshot = function(cfg, hooks) {
                 height: cfg.viewport[1],
                 width: cfg.viewport[0]
             }
+        });
+    })
+    // Wait page loaded
+    .then(() => {
+        const getDocumentStateCode = 'document.readyState';
+
+        return wait((resolve, reject) => {
+            return client.evaluate(getDocumentStateCode)
+            .then(result => {
+                if(result.value === 'complete') {
+                    resolve();
+
+                    return;
+                }
+
+                reject(new Error('Page load fialed'));
+            });
+        }, {
+            timeout: CDP_RESOURCE_REQUEST_TIMEOUT,
+            interval: 100
         });
     })
     // set html content
