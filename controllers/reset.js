@@ -16,7 +16,7 @@ module.exports = function(router) {
         const targets = yield bridge.getTargets();
 
         yield Promise.mapSeries(targets, target => {
-            return bridge.closeClient(target.id);
+            return bridge.closeClientById(target.id);
         });
 
         this.body = targets;
