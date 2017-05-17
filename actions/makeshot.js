@@ -10,14 +10,11 @@ const Promise = require('bluebird');
 
 const cpuCount = require('os').cpus().length;
 const clearTimeoutShots = require('../services/clear-timeout-shots');
-const formatColor = require('../lib/format-color');
 const bridge = require('../services/bridge');
 const logger = require('../services/logger');
 const wait = require('../lib/wait-promise');
 
 const env = process.env;
-const CDP_CLIENT_MAX_COUNT = +env.CDP_CLIENT_MAX_COUNT || 10;
-const CDP_CLIENT_REQUEST_TIMEOUT = +env.CDP_CLIENT_REQUEST_TIMEOUT || 10000;
 const SHOT_CLEAR_CHECK_INTERVAL = +env.SHOT_CLEAR_CHECK_INTERVAL || 100; // 每 N 次检查一次是否需要清理
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
@@ -35,7 +32,6 @@ Object.defineProperty(shotCounts, 'total', {
 
 const makeshot = function(cfg, hooks) {
     let client = null;
-    let clientInited = false;
 
     const traceInfo = function(type, metadata) {
         const msg = `Makeshot.${type}`;
@@ -63,43 +59,32 @@ const makeshot = function(cfg, hooks) {
             throw new Error('url not provided');
         }
 
-        if(bridge.clientCount < CDP_CLIENT_MAX_COUNT) {
-            return;
-        }
-
-        return new Promise((resolve, reject) => {
-            bridge.on('client.close', resolve);
-            bridge.on('client.error', reject);
-        })
-        .timeout(CDP_CLIENT_REQUEST_TIMEOUT, 'Request client timeout');
+        return bridge.requestClient();
     })
-    .then(() => {
+    .then(clt => {
         traceInfo('page.open', {
             url: cfg.url
         });
 
-        clientInited = true;
+        // Client ready
+        client = clt;
 
-        return bridge.openPage(cfg.url, {
+        return client.openPage(cfg.url, {
             viewport: {
                 height: cfg.viewport[1],
                 width: cfg.viewport[0]
             }
         });
     })
-    .then(clt => {
-        // cache
-        client = clt;
-
-        // set html content
-        if(cfg.htmlContent) {
-            traceInfo('page.setHTMLContent');
-
-            return client.Page.setDocumentContent({
-                frameId: client.frameId,
-                html: cfg.htmlContent
-            });
+    // set html content
+    .then(() => {
+        if(!cfg.htmlContent) {
+            return;
         }
+
+        traceInfo('page.setHTMLContent');
+
+        return client.setDocumentContent(cfg.htmlContent);
     })
     .then(() => {
         traceInfo('page.check');
@@ -114,18 +99,13 @@ const makeshot = function(cfg, hooks) {
         const ttl = +cfg.wrapFindTimeout || 1000;
         const maxTTL = +process.env.SHOT_MAX_TIMEOUT | 10000;
 
-        const options = {
-            timeout: Math.min(maxTTL, ttl),
-            interval: 100
-        };
-
         return wait((resolve, reject) => {
             Promise.try(() => {
-                return bridge.querySelectorAllByClient(client, selector);
+                return client.querySelectorAll(selector);
             })
             .then(({nodeIds}) => {
                 if(nodeIds.length >= minCount) {
-                    return;
+                    return nodeIds;
                 }
 
                 const msg = `Elements not found: ${cfg.wrapSelector}`;
@@ -139,66 +119,64 @@ const makeshot = function(cfg, hooks) {
             .catch(err => {
                 reject(err);
             });
-        }, options);
+        }, {
+            timeout: Math.min(maxTTL, ttl),
+            interval: 100
+        });
     })
     // hook: beforeShot
     .tap(() => {
         return hooks.beforeShot(cfg, client);
     })
     // clac rects
-    .then(() => {
+    .tap(() => {
         traceInfo('page.clacRects');
-
-        const selector = cfg.wrapSelector;
-
-        return bridge.querySelectorAllByClient(client, selector)
-        .then(({nodeIds}) => {
-            return nodeIds;
-        });
     })
     .map(nodeId => {
-        const DOM = client.DOM;
+        return client.getBoxModel(nodeId);
+    })
+    .map(model => {
+        const ret = {
+            top: Infinity,
+            left: Infinity,
+            right: -Infinity,
+            bottom: -Infinity,
+            height: 0,
+            width: 0
+        };
 
-        return DOM.getBoxModel({ nodeId })
-        .then(({model}) => {
-            const ret = {
-                top: Infinity,
-                left: Infinity,
-                right: -Infinity,
-                bottom: -Infinity,
-                height: 0,
-                width: 0
-            };
-
-            // consider rotate
-            model.border.forEach((val, idx) => {
-                if(idx % 2 === 0) {
-                    if(val < ret.left) {
-                        ret.left = val;
-                    }
-                    else if(val > ret.right) {
-                        ret.right = val;
-                    }
+        // consider rotate
+        model.border.forEach((val, idx) => {
+            if(idx % 2 === 0) {
+                if(val < ret.left) {
+                    ret.left = val;
                 }
-                else {
-                    if(val < ret.top) {
-                        ret.top = val;
-                    }
-                    else if(val > ret.bottom) {
-                        ret.bottom = val;
-                    }
+                else if(val > ret.right) {
+                    ret.right = val;
                 }
-            });
-
-            ret.height = ret.bottom - ret.top;
-            ret.width = ret.right - ret.left;
-
-            return ret;
+            }
+            else {
+                if(val < ret.top) {
+                    ret.top = val;
+                }
+                else if(val > ret.bottom) {
+                    ret.bottom = val;
+                }
+            }
         });
+
+        ret.height = ret.bottom - ret.top;
+        ret.width = ret.right - ret.left;
+
+        return ret;
     })
     // Filter
-    .filter((rect, idx) => {
-        return !cfg.wrapMaxCount || idx < cfg.wrapMaxCount;
+    .then(models => {
+        if(cfg.wrapMaxCount > 0) {
+            return models.slice(0, cfg.wrapMaxCount);
+        }
+
+        return models;
     })
     // delay render
     .delay(Math.min(1000, cfg.renderDelay))
@@ -206,10 +184,8 @@ const makeshot = function(cfg, hooks) {
     // Clac viewport
     .tap(rects => {
         const viewport = cfg.viewport;
-        const Emulation = client.Emulation;
-
-        let viewWidth = viewport[0];
         let viewHeight = viewport[1];
+        let viewWidth = viewport[0];
 
         // x use right, y use height by elem.scrollIntoView
         rects.forEach(rect => {
@@ -222,7 +198,7 @@ const makeshot = function(cfg, hooks) {
         });
 
         // log
-        traceInfo('client.setViewport', {
+        traceInfo('client.setVisibleSize', {
             size: [viewWidth, viewHeight],
             viewport: viewport
         });
@@ -233,83 +209,61 @@ const makeshot = function(cfg, hooks) {
             throw new Error(`Request Image size is out of limit: ${maxSize}`);
         }
 
-        return Promise.try(() => {
-            if(viewWidth > viewport[0] || viewHeight > viewport[1]) {
-                return Emulation.setVisibleSize({
-                    height: Math.max(viewHeight, viewport[1]),
-                    width: Math.max(viewWidth, viewport[0])
-                });
-            }
-        })
-        .then(() => {
-            // // https://medium.com/@dschnr/using-headless-chrome-as-an-automated-screenshot-tool-4b07dffba79a
-            // // This forceViewport call ensures that content outside the viewport is
-            // // rendered, otherwise it shows up as grey. Possibly a bug?
-            // return Emulation.forceViewport({
-            //     scale: 1,
-            //     x: 0,
-            //     y: 0
-            // });
-        });
+        if(viewWidth > viewport[0] || viewHeight > viewport[1]) {
+            const height = Math.max(viewHeight, viewport[1]);
+            const width = Math.max(viewWidth, viewport[0]);
+
+            return client.setVisibleSize(width, height);
+        }
     })
     // Set background color
-    // @TODO: 目前无效
+    // @TODO: 目前和 remote debugger 有冲突
     // https://bugs.chromium.org/p/chromium/issues/detail?id=689349
     .tap(() => {
-        const Emulation = client.Emulation;
-        const backgroundColor = {
-            a: cfg.out.imageType === 'png' ? 0 : 255,
-            r: 255,
-            g: 255,
-            b: 255
-        };
+        const isPng = cfg.out.imageType === 'png';
+        const backgroundColor = isPng ? '#00000000' : '#FFFFFFFF';
 
         traceInfo('page.setBackgorundColor', {
-            color: formatColor(backgroundColor)
+            color: backgroundColor
         });
 
-        return Emulation.setDefaultBackgroundColorOverride(backgroundColor);
+        return client.setBackgroundColor(backgroundColor);
     })
 
     // Focus element and Screenshot
     .mapSeries((rect, idx) => {
         traceInfo('client.captureScreenshot-' + idx);
 
-        const Runtime = client.Runtime;
-        const Page = client.Page;
         const ret = {
             xOffset: rect.left,
             yOffset: rect.top,
             rect
         };
+        const focusElementCode = `
+            var elems = document.querySelectorAll('${cfg.wrapSelector}');
+            var elem = elems[${idx}];
+            var ret = 0;
 
-        return Runtime.evaluate({
-            expression: `
-                var elems = document.querySelectorAll('${cfg.wrapSelector}');
-                var elem = elems[${idx}];
-                var ret = 0;
+            if(elem) {
+                elem.scrollIntoView(true);
 
-                if(elem) {
-                    elem.scrollIntoView(true);
+                ret = pageYOffset;
+            };
 
-                    ret = pageYOffset;
-                };
+            ret;
+        `;
 
-                ret;
-            `
-        })
-        .then(({result}) => {
+        return client.evaluate(focusElementCode)
+        .then(result => {
             // Fix page y offset
             ret.yOffset -= +result.value || 0;
 
-            return Page.captureScreenshot({
+            return client.captureScreenshot({
                 format: 'png'
             });
         })
-        .then(({data}) => {
-            traceInfo('client.imageToBuffer-' + idx);
-
-            ret.image = new Buffer(data, 'base64');
+        .then(buf => {
+            ret.image = buf;
 
             return ret;
         });
@@ -317,9 +271,9 @@ const makeshot = function(cfg, hooks) {
     // clean
     .finally(() => {
         if(client) {
-            traceInfo('client.close');
+            traceInfo('client.release');
 
-            return client.close();
+            return bridge.releaseClient(client);
         }
     })
     .tap(() => {
@@ -454,9 +408,7 @@ const makeshot = function(cfg, hooks) {
     })
 
     .catch(err => {
-        if(clientInited) {
-            shotCounts.error += 1;
-        }
+        shotCounts.error += 1;
 
         throw err;
     });
