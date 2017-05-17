@@ -246,24 +246,17 @@ const makeshot = function(cfg, hooks) {
         const focusElementCode = `
             var elems = document.querySelectorAll('${cfg.wrapSelector}');
             var elem = elems[${idx}];
+            var offset = '0:0';
+
             if(elem) {
                 elem.scrollIntoView();
+
+                var rect = elem.getBoundingClientRect();
+
+                offset = rect.left + ':' + rect.top;
             }
 
-            var x = 0;
-            var y = 0;
-            while(elem) {
-                y += elem.offsetTop;
-                x += elem.offsetLeft;
-                elem = elem.offsetParent;
-            }
-
-            var offset = {
-                x: Math.max(0, x - window.pageXOffset),
-                y: Math.max(0, y - window.pageYOffset)
-            };
-
-            offset.x + ':' + offset.y;
+            offset;
         `;
 
         return client.evaluate(focusElementCode)
