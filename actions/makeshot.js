@@ -235,28 +235,44 @@ const makeshot = function(cfg, hooks) {
         traceInfo('client.captureScreenshot-' + idx);
 
         const ret = {
-            xOffset: rect.left,
-            yOffset: rect.top,
+            cropRect: {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height
+            },
             rect
         };
         const focusElementCode = `
             var elems = document.querySelectorAll('${cfg.wrapSelector}');
             var elem = elems[${idx}];
-            var ret = 0;
-
             if(elem) {
-                elem.scrollIntoView(true);
+                elem.scrollIntoView();
+            }
 
-                ret = pageYOffset;
+            var x = 0;
+            var y = 0;
+            while(elem) {
+                y += elem.offsetTop;
+                x += elem.offsetLeft;
+                elem = elem.offsetParent;
+            }
+
+            var offset = {
+                x: Math.max(0, x - window.pageXOffset),
+                y: Math.max(0, y - window.pageYOffset)
             };
 
-            ret;
+            offset.x + ':' + offset.y;
         `;
 
         return client.evaluate(focusElementCode)
         .then(result => {
-            // Fix page y offset
-            ret.yOffset -= +result.value || 0;
+            const offset = String(result.value).split(':');
+
+            // Fix page offset
+            ret.cropRect.top = +offset[1] || 0;
+            ret.cropRect.left = +offset[0] || 0;
 
             return client.captureScreenshot({
                 format: 'png'
@@ -280,15 +296,10 @@ const makeshot = function(cfg, hooks) {
         traceInfo('client.extractImage');
     })
     // Extract image
-    .map(({image, rect, xOffset, yOffset}) => {
+    .map(({image, rect, cropRect}) => {
         const imageSize = cfg.imageSize || {};
 
-        image = sharp(image).extract({
-            height: rect.height,
-            width: rect.width,
-            left: xOffset,
-            top: yOffset
-        });
+        image = sharp(image).extract(cropRect);
 
         const imageWidth = +imageSize.width || null;
         const imageHeight = +imageSize.height || null;
