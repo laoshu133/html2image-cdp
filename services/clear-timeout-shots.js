@@ -11,7 +11,7 @@ const Promise = require('bluebird');
 const rShotId = /^[a-z]+_\d+/i;
 
 const OUT_PATH = process.env.OUT_PATH;
-const SHOT_MAX_TIMEOUT = +process.env.SHOT_MAX_TIMEOUT || 60000;
+const SHOT_CACHE_MAX_TIMEOUT = +process.env.SHOT_CACHE_MAX_TIMEOUT || 60000;
 
 module.exports = function() {
     const now = Date.now();
@@ -30,7 +30,7 @@ module.exports = function() {
         .then(stats => {
             const elapsed = now - stats.mtime.getTime();
 
-            if(stats.isDirectory() && elapsed > SHOT_MAX_TIMEOUT) {
+            if(stats.isDirectory() && elapsed > SHOT_CACHE_MAX_TIMEOUT) {
                 return true;
             }
 

@@ -16,7 +16,8 @@ const wait = require('../lib/wait-promise');
 
 const env = process.env;
 const CDP_RESOURCE_REQUEST_TIMEOUT = +env.CDP_RESOURCE_REQUEST_TIMEOUT || 5000;
-const SHOT_CLEAR_CHECK_INTERVAL = +env.SHOT_CLEAR_CHECK_INTERVAL || 100; // 每 N 次检查一次是否需要清理
+const SHOT_CACHE_CHECK_INTERVAL = +env.SHOT_CACHE_CHECK_INTERVAL || 100; // 每 N 次检查一次是否需要清理
+const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 10000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
 
@@ -127,8 +128,8 @@ const makeshot = function(cfg, hooks) {
     .then(() => {
         const selector = cfg.wrapSelector;
         const minCount = cfg.wrapMinCount;
-        const ttl = +cfg.wrapFindTimeout || 1000;
-        const maxTTL = +process.env.SHOT_MAX_TIMEOUT | 10000;
+        const timeout = +cfg.wrapFindTimeout || 1000;
+        const maxTimeout = Math.min(SHOT_WAIT_MAX_TIMEOUT, timeout);
 
         return wait((resolve, reject) => {
             Promise.try(() => {
@@ -151,7 +152,7 @@ const makeshot = function(cfg, hooks) {
                 reject(err);
             });
         }, {
-            timeout: Math.min(maxTTL, ttl),
+            timeout: maxTimeout,
             interval: 100
         });
     })
@@ -445,7 +446,7 @@ const makeshot = function(cfg, hooks) {
     })
     // Check clean
     .tap(() => {
-        if(shotCounts.total % SHOT_CLEAR_CHECK_INTERVAL === 0) {
+        if(shotCounts.total % SHOT_CACHE_CHECK_INTERVAL === 0) {
             return clearTimeoutShots();
         }
     })
