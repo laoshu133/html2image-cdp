@@ -19,6 +19,8 @@ module.exports = function(router) {
             return bridge.closeClientById(target.id);
         });
 
+        yield bridge.syncClients();
+
         this.body = targets;
     });
 };
