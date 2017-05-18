@@ -25,10 +25,10 @@ module.exports = function(router) {
             startTime: serverStartTime,
             uptime: Date.now() - serverStartTime,
             shotCounts: makeshot.shotCounts,
-            clientCount: bridge.clientCount,
+            clientCount: bridge.clients.length,
             targetCount: targets.length,
-            clientVersion: clientVersion,
-            currentTargets: targets
+            currentTargets: targets,
+            clientVersion: clientVersion
         };
 
         this.body = data;
