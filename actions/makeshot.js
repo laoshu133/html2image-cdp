@@ -15,7 +15,7 @@ const logger = require('../services/logger');
 const wait = require('../lib/wait-promise');
 
 const env = process.env;
-const CDP_RESOURCE_REQUEST_TIMEOUT = +env.CDP_RESOURCE_REQUEST_TIMEOUT || 5000;
+const CDP_RESOURCE_REQUEST_TIMEOUT = +env.CDP_RESOURCE_REQUEST_TIMEOUT || 10000;
 const SHOT_CACHE_CHECK_INTERVAL = +env.SHOT_CACHE_CHECK_INTERVAL || 100; // 每 N 次检查一次是否需要清理
 const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 10000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
@@ -95,7 +95,8 @@ const makeshot = function(cfg, hooks) {
         return wait((resolve, reject) => {
             return client.evaluate(getDocumentStateCode)
             .then(result => {
-                if(result.value === 'complete') {
+                const state = result.value;
+                if(state === 'complete' || state === 'interactive') {
                     resolve();
 
                     return;
@@ -308,10 +309,16 @@ const makeshot = function(cfg, hooks) {
             ret.cropRect.left = Math.round(offset[0]) || 0;
 
             return client.captureScreenshot({
+                fromSurface: false,
                 format: 'png'
             });
         })
+        .timeout(SHOT_WAIT_MAX_TIMEOUT, 'Capture screenshot timeout')
         .then(buf => {
+            traceInfo('client.captureScreenshot.done-' + idx, {
+                size: buf.length
+            });
+
             ret.image = buf;
 
             return ret;
@@ -326,7 +333,7 @@ const makeshot = function(cfg, hooks) {
         }
     })
     .tap(() => {
-        traceInfo('client.extractImage');
+        traceInfo('client.processImage');
     })
     // Extract image
     .map(({image, rect, cropRect}) => {
@@ -371,8 +378,10 @@ const makeshot = function(cfg, hooks) {
         const imageQuality = cfg.imageQuality;
 
         if(imageType === 'png') {
+            const level = 10 - Math.floor(imageQuality / 10);
+
             image = image.png({
-                compressionLevel: Math.floor(imageQuality / 100),
+                compressionLevel: level,
                 progressive: false
             });
         }
@@ -393,7 +402,10 @@ const makeshot = function(cfg, hooks) {
     })
     // Save images
     .tap(() => {
-        traceInfo('client.saveImage');
+        traceInfo('client.saveImage', {
+            imageQuality: cfg.imageQuality,
+            imageSize: cfg.imageSize
+        });
 
         return fsp.ensureDir(cfg.out.path);
     })
