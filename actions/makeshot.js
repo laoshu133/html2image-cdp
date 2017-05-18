@@ -60,15 +60,25 @@ const makeshot = function(cfg, hooks) {
             throw new Error('url not provided');
         }
 
-        return bridge.requestClient();
+        return bridge.requestClient()
+        // Cache client
+        .then(clt => {
+            client = clt;
+        });
     })
-    .then(clt => {
-        traceInfo('page.open', {
+    // Reset page scale
+    .then(() => {
+        traceInfo('page.resetSacle', {
             url: cfg.url
         });
 
-        // Client ready
-        client = clt;
+        return client.setPageScaleFactor(1);
+    })
+    // Open url
+    .then(() => {
+        traceInfo('page.open', {
+            url: cfg.url
+        });
 
         return client.openPage(cfg.url, {
             viewport: {
@@ -280,13 +290,21 @@ const makeshot = function(cfg, hooks) {
             offset;
         `;
 
-        return client.evaluate(focusElementCode)
+        // Set page scale
+        return Promise.try(() => {
+            // @TODO: setPageScaleFactor 无效
+            // return client.setPageScaleFactor(0.5);
+        })
+        // Focus element and get offset
+        .then(() => {
+            return client.evaluate(focusElementCode);
+        })
         .then(result => {
             const offset = String(result.value).split(':');
 
             // Fix page offset
-            ret.cropRect.top = +offset[1] || 0;
-            ret.cropRect.left = +offset[0] || 0;
+            ret.cropRect.top = Math.round(offset[1]) || 0;
+            ret.cropRect.left = Math.round(offset[0]) || 0;
 
             return client.captureScreenshot({
                 format: 'png'
