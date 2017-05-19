@@ -313,7 +313,6 @@ const makeshot = function(cfg, hooks) {
                 format: 'png'
             });
         })
-        .timeout(SHOT_WAIT_MAX_TIMEOUT, 'Capture screenshot timeout')
         .then(buf => {
             traceInfo('client.captureScreenshot.done-' + idx, {
                 size: buf.length
