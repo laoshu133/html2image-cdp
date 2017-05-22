@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --ignore tests index.js",
+    "start": "node index.js",
     "test": "npm test"
   },
   "repository": {
