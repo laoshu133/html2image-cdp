@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@git.huanleguang.com:static/html2image-cdp.git"
+    "url": "git@github.com:laoshu133/html2image-cdp.git"
   },
   "keywords": [
     "chrome",
@@ -23,7 +23,7 @@
   "dependencies": {
     "bluebird": "^3.5.0",
     "chrome-remote-interface": "^0.22.0",
-    "debug": "^2.6.6",
+    "debug": "^2.6.8",
     "dotenv-safe": "^4.0.4",
     "fs-promise": "^2.0.3",
     "hlg-logger": "0.0.6",
