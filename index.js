@@ -32,8 +32,9 @@ app.use(function *(next) {
 });
 
 // favicon
-// maxAge, 1 month
-app.use(favicon(path.join(__dirname, '../favicon.ico'), {
+const WWW_FAVICON = path.join(__dirname, process.env.WWW_FAVICON);
+app.use(favicon(WWW_FAVICON, {
+    // maxAge, 1 month
     maxAge: 30 * 24 * 60 * 60 * 1000
 }));
 
