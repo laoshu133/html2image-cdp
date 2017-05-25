@@ -367,7 +367,13 @@ const makeshot = function(cfg, hooks) {
     })
     // hooks: beforeOptimize
     .tap(() => {
-        traceInfo('client.optimizeImage');
+        // Fix imageQuality
+        cfg.imageQuality = parseInt(cfg.imageQuality, 10) || 80;
+
+        traceInfo('client.optimizeImage', {
+            imageQuality: cfg.imageQuality,
+            imageSize: cfg.imageSize
+        });
 
         return hooks.beforeOptimize(cfg);
     })
@@ -377,10 +383,10 @@ const makeshot = function(cfg, hooks) {
         const imageQuality = cfg.imageQuality;
 
         if(imageType === 'png') {
-            const level = 10 - Math.floor(imageQuality / 10);
+            const level = Math.floor(10 - imageQuality / 10);
 
             image = image.png({
-                compressionLevel: level,
+                compressionLevel: Math.max(0, Math.min(9, level)),
                 progressive: false
             });
         }
