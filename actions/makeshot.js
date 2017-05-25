@@ -367,9 +367,6 @@ const makeshot = function(cfg, hooks) {
     })
     // hooks: beforeOptimize
     .tap(() => {
-        // Fix imageQuality
-        cfg.imageQuality = parseInt(cfg.imageQuality, 10) || 80;
-
         traceInfo('client.optimizeImage', {
             imageQuality: cfg.imageQuality,
             imageSize: cfg.imageSize

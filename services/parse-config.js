@@ -64,6 +64,9 @@ module.exports = function(cfg) {
             +viewport[1] || 600
         ];
 
+        // Fix imageQuality
+        cfg.imageQuality = parseInt(cfg.imageQuality, 10) || 80;
+
         // Fix imageSize
         let imageSize = cfg.imageSize;
         if(imageSize && typeof imageSize === 'string') {
