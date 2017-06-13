@@ -198,8 +198,9 @@ const makeshot = function(cfg, hooks) {
             }
         });
 
-        ret.height = ret.bottom - ret.top;
-        ret.width = ret.right - ret.left;
+        // Ensure rect has size
+        ret.height = Math.max(1, ret.bottom - ret.top);
+        ret.width = Math.max(1, ret.right - ret.left);
 
         return ret;
     })
