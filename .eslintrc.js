@@ -47,11 +47,16 @@ module.exports = {
                     },
                     'if': {
                         after: false
+                    },
+                    'while': {
+                        after: false
                     }
                 }
             }
         ],
-        indent: [2, 4],
+        indent: [2, 4, {
+            MemberExpression: 0
+        }],
         eqeqeq: 2,
         curly: 1
     }
