@@ -4,7 +4,7 @@
   "description": "A screenshot server base on Chrome Debugging Protocol interface.",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --ignore tests index.js",
+    "dev": "nodemon --debug --ignore test index.js",
     "start": "node index.js",
     "test": "echo @TODO:..."
   },
