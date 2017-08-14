@@ -163,12 +163,12 @@ const makeshot = function(cfg, hooks) {
     })
     // clac rects
     .tap(() => {
-        traceInfo('page.clacRects');
+        traceInfo('page.startClacRects');
     })
     .map(nodeId => {
         return client.getBoxModel(nodeId);
     })
-    .map(model => {
+    .map((model, idx) => {
         const ret = {
             top: Infinity,
             left: Infinity,
@@ -201,6 +201,8 @@ const makeshot = function(cfg, hooks) {
         // Ensure rect has size
         ret.height = Math.max(1, ret.bottom - ret.top);
         ret.width = Math.max(1, ret.right - ret.left);
+
+        traceInfo(`page.getClipRect-${idx}`, ret);
 
         return ret;
     })
@@ -306,8 +308,8 @@ const makeshot = function(cfg, hooks) {
             const offset = String(result.value).split(':');
 
             // Fix page offset
-            ret.cropRect.top = Math.round(offset[1]) || 0;
-            ret.cropRect.left = Math.round(offset[0]) || 0;
+            ret.cropRect.top = Math.floor(offset[1]) || 0;
+            ret.cropRect.left = Math.floor(offset[0]) || 0;
 
             return client.captureScreenshot({
                 fromSurface: false,
@@ -332,15 +334,13 @@ const makeshot = function(cfg, hooks) {
             return bridge.releaseClient(client);
         }
     })
-    .tap(() => {
-        traceInfo('client.processImage');
-    })
     // Extract image
-    .map(({image, rect, cropRect}) => {
-        const imageSize = cfg.imageSize || {};
+    .map(({image, rect, cropRect}, idx) => {
+        traceInfo(`client.processImage-${idx}`, { cropRect });
 
         image = sharp(image).extract(cropRect);
 
+        const imageSize = cfg.imageSize || {};
         const imageWidth = +imageSize.width || null;
         const imageHeight = +imageSize.height || null;
         if(imageWidth || imageHeight) {
@@ -403,16 +403,16 @@ const makeshot = function(cfg, hooks) {
     .tap(() => {
         return hooks.afterOptimize(cfg);
     })
-    // Save images
     .tap(() => {
-        traceInfo('client.saveImage', {
+        return fsp.ensureDir(cfg.out.path);
+    })
+    // Save images
+    .map(({image, rect}, idx) => {
+        traceInfo(`client.saveImage-${idx}`, {
             imageQuality: cfg.imageQuality,
             imageSize: cfg.imageSize
         });
 
-        return fsp.ensureDir(cfg.out.path);
-    })
-    .map(({image, rect}, idx) => {
         const out = cfg.out;
         const ext = path.extname(out.image);
         const name = path.basename(out.image, ext);
