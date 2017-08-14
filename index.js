@@ -69,7 +69,6 @@ app.handleError = function(err, ctx) {
     return data;
 };
 onerror(app, {
-    template: path.join(__dirname, '../views/www/error.html'),
     accepts() {
         let type = this.accepts(['json', 'html']);
 

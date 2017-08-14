@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon --ignore tests index.js",
     "start": "node index.js",
-    "test": "npm test"
+    "test": "echo @TODO:..."
   },
   "repository": {
     "type": "git",
