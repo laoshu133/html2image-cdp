@@ -133,23 +133,18 @@ module.exports = function(cfg) {
             return cfg;
         }
 
-        // html tpl
-        const htmlTpl = String(cfg.htmlTpl || 'default').trim();
+        const rHTMLExt = /\.html$/i;
+        const tplName = cfg.contentTemplate || cfg.htmlTpl || 'default';
+        const tplFileName = tplName.replace(rHTMLExt, '') + '.html';
+        const tplPath = path.join(SHOT_HTML_TPL_PATH, tplFileName);
 
-        // Filter
-        let tplName = htmlTpl.replace(/\.html$/, '');
-        tplName = tplName.replace(/[^\w]/g, '');
-        tplName += '.html';
-
-        const htmlTplPath = path.join(SHOT_HTML_TPL_PATH, tplName);
-
-        return fsp.exists(htmlTplPath)
+        return fsp.exists(tplPath)
         .then(exists => {
             if(!exists) {
                 throw new Error('Template not exists: ' + tplName);
             }
 
-            return fsp.readFile(htmlTplPath);
+            return fsp.readFile(tplPath);
         })
         .then(htmlTpl => {
             const html = fill(htmlTpl, cfg);
