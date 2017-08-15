@@ -253,14 +253,12 @@ const makeshot = function(cfg, hooks) {
         }
     })
     // Set background color
-    // @TODO: 目前和 remote debugger 有冲突
-    // https://bugs.chromium.org/p/chromium/issues/detail?id=689349
     .tap(() => {
         const isPng = cfg.out.imageType === 'png';
         const backgroundColor = isPng ? '#00000000' : '#FFFFFFFF';
 
         traceInfo('page.setBackgorundColor', {
-            color: backgroundColor
+            color: cfg.backgroundColor || backgroundColor
         });
 
         return client.setBackgroundColor(backgroundColor);
