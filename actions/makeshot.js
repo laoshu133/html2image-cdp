@@ -75,9 +75,10 @@ const makeshot = function(cfg, hooks) {
 
         return client.setPageScaleFactor(1);
     })
-    // Open url
+    // Load url
     .then(() => {
         traceInfo('page.open', {
+            hasContent: !!cfg.content,
             url: cfg.url
         });
 

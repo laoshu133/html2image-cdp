@@ -1,6 +1,7 @@
 module.exports = {
     url: null, // 待截图的 URL，如果指定 content 此参数无效
     content: '', // 如果指定 content ，将自动根据 htmlTpl 构建 HTML
+    contentTemplate: 'default', // content 渲染模板
     action: 'makeshot', // 动作， 默认 makeshot
     dataType: 'json', // 返回的数据类型，支持 json 和 image
 
