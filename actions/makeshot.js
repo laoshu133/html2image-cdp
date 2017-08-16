@@ -159,10 +159,12 @@ const makeshot = function(cfg, hooks) {
             interval: 100
         });
     })
+
     // hook: beforeShot
     .tap(() => {
         return hooks.beforeShot(client);
     })
+
     // clac rects
     .tap(() => {
         traceInfo('page.startClacRects');
