@@ -51,7 +51,9 @@ const makeshot = function(cfg, hooks) {
         beforeShot: lodash.noop,
         afterShot: lodash.noop,
         beforeOptimize: lodash.noop,
-        afterOptimize: lodash.noop
+        afterOptimize: lodash.noop,
+        afterSaveImages: lodash.noop,
+        afterFormatResult: lodash.noop
     });
 
     return Promise.try(() => {
@@ -123,7 +125,7 @@ const makeshot = function(cfg, hooks) {
         traceInfo('page.check');
 
         // hook: beforeCheck
-        return hooks.beforeCheck(cfg, client);
+        return hooks.beforeCheck(client);
     })
     // check wrap count
     .then(() => {
@@ -159,7 +161,7 @@ const makeshot = function(cfg, hooks) {
     })
     // hook: beforeShot
     .tap(() => {
-        return hooks.beforeShot(cfg, client);
+        return hooks.beforeShot(client);
     })
     // clac rects
     .tap(() => {
@@ -332,6 +334,12 @@ const makeshot = function(cfg, hooks) {
             return bridge.releaseClient(client);
         }
     })
+
+    // hooks: afterShot
+    .tap(images => {
+        return hooks.afterShot(images);
+    })
+
     // Extract image
     .map(({image, rect, cropRect}, idx) => {
         traceInfo(`client.processImage-${idx}`, { cropRect });
@@ -364,15 +372,18 @@ const makeshot = function(cfg, hooks) {
     }, {
         concurrency: cpuCount
     })
+
     // hooks: beforeOptimize
-    .tap(() => {
+    .tap(images => {
         traceInfo('client.optimizeImage', {
             imageQuality: cfg.imageQuality,
-            imageSize: cfg.imageSize
+            imageSize: cfg.imageSize,
+            imageCount: images.length
         });
 
-        return hooks.beforeOptimize(cfg);
+        return hooks.beforeOptimize(images);
     })
+
     // Optimize image
     .map(({image, rect}) => {
         const imageType = cfg.out.imageType;
@@ -397,14 +408,16 @@ const makeshot = function(cfg, hooks) {
     }, {
         concurrency: cpuCount
     })
+
     // hooks: afterOptimize
-    .tap(() => {
-        return hooks.afterOptimize(cfg);
+    .tap(images => {
+        return hooks.afterOptimize(images);
     })
+
+    // Save images
     .tap(() => {
         return fsp.ensureDir(cfg.out.path);
     })
-    // Save images
     .map(({image, rect}, idx) => {
         traceInfo(`client.saveImage-${idx}`, {
             imageQuality: cfg.imageQuality,
@@ -428,20 +441,21 @@ const makeshot = function(cfg, hooks) {
     }, {
         concurrency: cpuCount
     })
-    // hooks: afterShot
-    .tap(data => {
-        return hooks.afterShot(cfg, data);
+
+    // hooks: afterSaveImages
+    .tap(images => {
+        return hooks.afterSaveImages(images);
     })
 
-    // Formar result
+    // Format result
     .then(items => {
         traceInfo('client.formatResult');
 
         const ret = lodash.clone(cfg.out);
 
-        const images = ret.images = [];
-        const metadata = ret.metadata = {};
+        const metadata = ret.metadata || {};
         const crops = metadata.crops = [];
+        const images = ret.images = [];
 
         items.forEach(item => {
             images.push(item.imagePath);
@@ -453,15 +467,21 @@ const makeshot = function(cfg, hooks) {
         concurrency: cpuCount
     })
 
-    // Count
-    .tap(() => {
-        shotCounts.success += 1;
+    // hooks: afterFormatResult
+    .tap(result => {
+        return hooks.afterFormatResult(result);
     })
+
     // Check clean
     .tap(() => {
         if(shotCounts.total % SHOT_CACHE_CHECK_INTERVAL === 0) {
             return clearTimeoutShots();
         }
+    })
+
+    // Count
+    .tap(() => {
+        shotCounts.success += 1;
     })
 
     .catch(err => {
