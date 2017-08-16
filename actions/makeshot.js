@@ -67,19 +67,16 @@ const makeshot = function(cfg, hooks) {
             client = clt;
         });
     })
-    // Reset page scale
+    // Prepare client
     .then(() => {
-        traceInfo('page.resetSacle', {
-            url: cfg.url
-        });
+        traceInfo('client.prepare');
 
         return client.setPageScaleFactor(1);
     })
     // Load url
     .then(() => {
         traceInfo('page.open', {
-            hasContent: !!cfg.content,
-            url: cfg.url
+            hasContent: !!cfg.content
         });
 
         return client.openPage(cfg.url, {
@@ -88,6 +85,18 @@ const makeshot = function(cfg, hooks) {
                 width: cfg.viewport[0]
             }
         });
+    })
+    // Update document content
+    .then(() => {
+        if(!cfg.htmlContent) {
+            return;
+        }
+
+        traceInfo('page.updateDocumentContent', {
+            contentTemplate: cfg.contentTemplate
+        });
+
+        return client.setDocumentContent(cfg.htmlContent);
     })
     // Wait page loaded
     .then(() => {
@@ -109,16 +118,6 @@ const makeshot = function(cfg, hooks) {
             timeout: CDP_RESOURCE_REQUEST_TIMEOUT,
             interval: 100
         });
-    })
-    // set html content
-    .then(() => {
-        if(!cfg.htmlContent) {
-            return;
-        }
-
-        traceInfo('page.setHTMLContent');
-
-        return client.setDocumentContent(cfg.htmlContent);
     })
     .then(() => {
         traceInfo('page.check');

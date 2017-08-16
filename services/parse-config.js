@@ -134,7 +134,7 @@ module.exports = function(cfg) {
         }
 
         const rHTMLExt = /\.html$/i;
-        const tplName = cfg.contentTemplate || cfg.htmlTpl || 'default';
+        const tplName = cfg.htmlTpl || cfg.contentTemplate || 'default';
         const tplFileName = tplName.replace(rHTMLExt, '') + '.html';
         const tplPath = path.join(SHOT_HTML_TPL_PATH, tplFileName);
 
@@ -149,6 +149,7 @@ module.exports = function(cfg) {
         .then(htmlTpl => {
             const html = fill(htmlTpl, cfg);
 
+            cfg.contentTemplate = tplName;
             cfg.url = 'about:blank';
             cfg.htmlContent = html;
 
