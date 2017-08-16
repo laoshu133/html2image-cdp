@@ -114,7 +114,8 @@ module.exports = function(cfg) {
             name: outDir,
             path: outPath,
             imageType: imgExt === '.png' ? 'png' : 'jpeg',
-            image: path.join(outPath, outName + imgExt)
+            image: path.join(outPath, outName + imgExt),
+            metadata: {}
         };
 
         return cfg;
