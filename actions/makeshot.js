@@ -40,8 +40,8 @@ const makeshot = function(cfg, hooks) {
 
         return logger.info(msg, lodash.assign({
             selector: cfg.wrapSelector,
-            shot_id: cfg.id,
-            url: cfg.url
+            shot_url: cfg.url,
+            shot_id: cfg.id
         }, metadata));
     };
 
