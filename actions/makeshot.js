@@ -239,7 +239,7 @@ const makeshot = function(cfg, hooks) {
 
         // log
         traceInfo('client.setVisibleSize', {
-            size: [viewWidth, viewHeight],
+            visibleSize: [viewWidth, viewHeight],
             viewport: viewport
         });
 
@@ -320,7 +320,7 @@ const makeshot = function(cfg, hooks) {
         })
         .then(buf => {
             traceInfo('client.captureScreenshot.done-' + idx, {
-                size: buf.length
+                bufferLength: buf.length
             });
 
             ret.image = buf;
