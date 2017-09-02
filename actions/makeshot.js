@@ -489,6 +489,10 @@ const makeshot = function(cfg, hooks) {
     .catch(err => {
         shotCounts.error += 1;
 
+        traceInfo('error: ' + err.message, {
+            stack: err.stack
+        });
+
         throw err;
     });
 };
