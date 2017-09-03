@@ -294,7 +294,8 @@ const makeshot = function(cfg, hooks) {
 
                 var rect = elem.getBoundingClientRect();
 
-                offset = [rect.left, rect.top];
+                offset[0] = rect.left;
+                offset[1] = rect.top;
             }
 
             JSON.stringify(data);
@@ -314,8 +315,8 @@ const makeshot = function(cfg, hooks) {
             const offset = data.elementOffset || [0, 0];
 
             // Fix page offset
-            ret.cropRect.top = Math.floor(offset[1]) || 0;
             ret.cropRect.left = Math.floor(offset[0]) || 0;
+            ret.cropRect.top = Math.floor(offset[1]) || 0;
 
             traceInfo('client.captureScreenshot-' + idx, {
                 elementOffset: data.elementOffset,
