@@ -328,11 +328,12 @@ const makeshot = function(cfg, hooks) {
                 format: 'png'
             });
         })
-        .then(buf => {
+        .tap(buf => {
             traceInfo('client.captureScreenshot.done-' + idx, {
                 bufferLength: buf.length
             });
-
+        })
+        .then(buf => {
             ret.image = buf;
 
             return ret;
