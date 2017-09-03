@@ -270,8 +270,6 @@ const makeshot = function(cfg, hooks) {
 
     // Focus element and Screenshot
     .mapSeries((rect, idx) => {
-        traceInfo('client.captureScreenshot-' + idx);
-
         const ret = {
             cropRect: {
                 top: rect.top,
@@ -281,25 +279,30 @@ const makeshot = function(cfg, hooks) {
             },
             rect
         };
+
         const focusElementCode = `
             var elems = document.querySelectorAll('${cfg.wrapSelector}');
             var elem = elems[${idx}];
-            var offset = '0:0';
+            var offset = [0, 0];
+            var data = {
+                visibleSize: [window.innerWidth, window.innerHeight],
+                elementOffset: offset
+            };
 
             if(elem) {
                 elem.scrollIntoView();
 
                 var rect = elem.getBoundingClientRect();
 
-                offset = rect.left + ':' + rect.top;
+                offset = [rect.left, rect.top];
             }
 
-            offset;
+            JSON.stringify(data);
         `;
 
         // Set page scale
+        // @TODO: 目前无效，待支持矢量缩放
         return Promise.try(() => {
-            // @TODO: setPageScaleFactor 无效
             // return client.setPageScaleFactor(0.5);
         })
         // Focus element and get offset
@@ -307,11 +310,18 @@ const makeshot = function(cfg, hooks) {
             return client.evaluate(focusElementCode);
         })
         .then(result => {
-            const offset = String(result.value).split(':');
+            const data = JSON.parse(result.value);
+            const offset = data.elementOffset || [0, 0];
 
             // Fix page offset
             ret.cropRect.top = Math.floor(offset[1]) || 0;
             ret.cropRect.left = Math.floor(offset[0]) || 0;
+
+            traceInfo('client.captureScreenshot-' + idx, {
+                elementOffset: data.elementOffset,
+                visibleSize: data.visibleSize,
+                cropRect: ret.cropRect
+            });
 
             return client.captureScreenshot({
                 fromSurface: false,
