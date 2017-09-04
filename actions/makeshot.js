@@ -69,16 +69,11 @@ const makeshot = function(cfg, hooks) {
             client = clt;
         });
     })
-    // Prepare client
-    .then(() => {
-        traceInfo('client.prepare');
-
-        return client.setPageScaleFactor(1);
-    })
     // Load url
     .then(() => {
         traceInfo('page.open', {
-            hasContent: !!cfg.content
+            hasContent: !!cfg.content,
+            viewport: cfg.viewport
         });
 
         return client.openPage(cfg.url, {
@@ -249,12 +244,15 @@ const makeshot = function(cfg, hooks) {
             throw new Error(`Request Image size is out of limit: ${maxSize}`);
         }
 
-        if(viewWidth > viewport[0] || viewHeight > viewport[1]) {
-            const height = Math.max(viewHeight, viewport[1]);
-            const width = Math.max(viewWidth, viewport[0]);
+        return client.getVisibleSize()
+        .then(size => {
+            if(viewWidth > size.width || viewHeight > size.height) {
+                const height = Math.max(viewHeight, size.height);
+                const width = Math.max(viewWidth, size.width);
 
-            return client.setVisibleSize(width, height);
-        }
+                return client.setVisibleSize(width, height);
+            }
+        });
     })
     // Set background color
     .tap(() => {
