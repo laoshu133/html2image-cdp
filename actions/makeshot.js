@@ -323,10 +323,7 @@ const makeshot = function(cfg, hooks) {
                 cropRect: cropRect
             });
 
-            const imageType = cfg.out.imageType;
-
             return client.captureScreenshot({
-                format: imageType === 'png' ? 'png' : 'jpeg',
                 // @TODO: 目前无效，待优化
                 // clip: {
                 //     height: cropRect.height,
@@ -335,7 +332,8 @@ const makeshot = function(cfg, hooks) {
                 //     x: cropRect.x,
                 //     scale: 1
                 // },
-                fromSurface: true
+                fromSurface: true,
+                format: 'png'
             });
         })
         .tap(buf => {
