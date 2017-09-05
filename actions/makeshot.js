@@ -268,13 +268,14 @@ const makeshot = function(cfg, hooks) {
 
     // Focus element and Screenshot
     .mapSeries((rect, idx) => {
+        const cropRect = {
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height
+        };
         const ret = {
-            cropRect: {
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height
-            },
+            cropRect,
             rect
         };
 
@@ -312,19 +313,29 @@ const makeshot = function(cfg, hooks) {
             const data = JSON.parse(result.value);
             const offset = data.elementOffset || [0, 0];
 
-            // Fix page offset
-            ret.cropRect.left = Math.floor(offset[0]) || 0;
-            ret.cropRect.top = Math.floor(offset[1]) || 0;
+            // Fix crop offset
+            cropRect.left = Math.floor(offset[0]) || 0;
+            cropRect.top = Math.floor(offset[1]) || 0;
 
             traceInfo('client.captureScreenshot-' + idx, {
                 elementOffset: data.elementOffset,
                 visibleSize: data.visibleSize,
-                cropRect: ret.cropRect
+                cropRect: cropRect
             });
 
+            const imageType = cfg.out.imageType;
+
             return client.captureScreenshot({
-                fromSurface: false,
-                format: 'png'
+                format: imageType === 'png' ? 'png' : 'jpeg',
+                // @TODO: 目前无效，待优化
+                // clip: {
+                //     height: cropRect.height,
+                //     width: cropRect.width,
+                //     y: cropRect.y,
+                //     x: cropRect.x,
+                //     scale: 1
+                // },
+                fromSurface: true
             });
         })
         .tap(buf => {
