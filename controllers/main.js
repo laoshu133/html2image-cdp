@@ -10,6 +10,7 @@ const actions = require('../actions/index');
 const pathToUrl = require('../services/path-to-url');
 const parseConfig = require('../services/parse-config');
 const renderReadme = require('../services/render-readme');
+const logger = require('../services/logger');
 
 module.exports = function(router) {
     const shotMW = function *() {
@@ -30,6 +31,12 @@ module.exports = function(router) {
 
         let ret = null;
         if(actions[cfg.action]) {
+            logger.info('Main controller init', {
+                action: cfg.action,
+                user_agent: this.get('User-Agent'),
+                user_ip: this.ip
+            });
+
             ret = yield actions[cfg.action](cfg);
         }
         else {
