@@ -32,7 +32,8 @@ module.exports = function(router) {
         let ret = null;
         if(actions[cfg.action]) {
             logger.info('Main controller init', {
-                action: cfg.action,
+                shot_id: cfg.id,
+                shot_action: cfg.action,
                 user_agent: this.get('User-Agent'),
                 user_ip: this.ip
             });
