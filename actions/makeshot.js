@@ -7,6 +7,7 @@ const sharp = require('sharp');
 const lodash = require('lodash');
 const fsp = require('fs-promise');
 const Promise = require('bluebird');
+const Shared = require('mmap-object');
 
 const cpuCount = require('os').cpus().length;
 const clearTimeoutShots = require('../services/clear-timeout-shots');
@@ -21,14 +22,38 @@ const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 10000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
 
-const shotCounts = {
-    success: 0,
-    error: 0
-};
-Object.defineProperty(shotCounts, 'total', {
-    enumerable: true,
-    get() {
-        return shotCounts.success + shotCounts.error;
+const countSharedPath = path.join(process.env.OUT_PATH, '.counts');
+const sharedData = new Shared.Create(countSharedPath, 10);
+
+// Erase mem shared
+process.on('exit', () => {
+    sharedData.close();
+});
+
+const shotCounts = Object.defineProperties({}, {
+    success: {
+        enumerable: true,
+        get() {
+            return sharedData.success || 0;
+        },
+        set(n) {
+            sharedData.success = +n || 0;
+        }
+    },
+    error: {
+        enumerable: true,
+        get() {
+            return sharedData.error || 0;
+        },
+        set(n) {
+            sharedData.error = +n || 0;
+        }
+    },
+    total: {
+        enumerable: true,
+        get() {
+            return this.success + this.error;
+        }
     }
 });
 
