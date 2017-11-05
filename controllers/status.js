@@ -16,9 +16,10 @@ module.exports = function(router) {
     const serverStartTime = Date.now();
 
     router.get('/status', function *() {
-        const targets = yield bridge.getTargets();
+        const query = this.query;
         const clientVersion = yield bridge.getClientVersion();
 
+        // 多进程运行时部分数据非实时
         const data = {
             host: process.env.WWW_HOST,
             startTimePretty: prettyMs(serverStartTime),
@@ -26,10 +27,15 @@ module.exports = function(router) {
             uptime: Date.now() - serverStartTime,
             shotCounts: makeshot.shotCounts,
             clientCount: bridge.clients.length,
-            targetCount: targets.length,
-            currentTargets: targets,
             clientVersion: clientVersion
         };
+
+        if(+query.show_targets === 1) {
+            const targets = yield bridge.getTargets();
+
+            data.targetCount = targets.length;
+            data.targets = targets;
+        }
 
         this.body = data;
     });
