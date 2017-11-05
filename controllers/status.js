@@ -22,9 +22,10 @@ module.exports = function(router) {
         // 多进程运行时部分数据非实时
         const data = {
             host: process.env.WWW_HOST,
-            startTimePretty: prettyMs(serverStartTime),
-            startTime: serverStartTime,
+            process_id: process.pid,
             uptime: Date.now() - serverStartTime,
+            startTime: serverStartTime,
+            startTimePretty: prettyMs(serverStartTime),
             shotCounts: makeshot.shotCounts,
             clientCount: bridge.clients.length,
             clientVersion: clientVersion

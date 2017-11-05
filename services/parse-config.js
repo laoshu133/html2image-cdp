@@ -49,6 +49,7 @@ module.exports = function(cfg) {
 
             cfg.id = [
                 action,
+                process.pid,
                 nowStr.replace(notNumber, ''),
                 ++uuid
             ].join('_');
