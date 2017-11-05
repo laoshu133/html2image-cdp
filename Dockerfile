@@ -1,34 +1,34 @@
-FROM node:6-slim
-LABEL maintainer "xiaomi@huanleguang.com"
+FROM ubuntu:14.04
+LABEL maintainer "admin@laoshu133.com"
 
 # Expose
 EXPOSE 3007
-CMD [ "npm", "start" ]
 
-# Create app directory
-RUN mkdir -p /usr/src/app
-WORKDIR /usr/src/app
+# libvips
+ENV LIBVIPS_VERSION 8.5.5
 
-# Install libvips
-ENV LIBVIPS_VERSION_MAJOR 8
-ENV LIBVIPS_VERSION_MINOR 4
-ENV LIBVIPS_VERSION_PATCH 2
-ENV LIBVIPS_VERSION $LIBVIPS_VERSION_MAJOR.$LIBVIPS_VERSION_MINOR.$LIBVIPS_VERSION_PATCH
+# alinode-v2.2.3 with Node.js v6.11.3
+ENV ALINODE_VERSION 2.2.3
+ENV TNVM_DIR /root/.tnvm
 
+# Use "bash" as replacement for	"sh"
+# https://github.com/moby/moby/issues/8100#issue-43075601
+RUN rm /bin/sh && ln -sf /bin/bash /bin/sh
+
+# Install dependencies
 RUN \
-  # Install dependencies
   apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  automake build-essential curl \
+  automake g++ build-essential curl wget \
   gobject-introspection gtk-doc-tools libglib2.0-dev libpng12-dev \
-  libwebp-dev libtiff5-dev libgif-dev libexif-dev libxml2-dev libjpeg62-turbo-dev libpoppler-glib-dev \
+  libwebp-dev libtiff5-dev libgif-dev libexif-dev libxml2-dev libjpeg-turbo8-dev libpoppler-glib-dev \
   swig libmagickwand-dev libpango1.0-dev libmatio-dev libopenslide-dev libcfitsio3-dev \
-  libgsf-1-dev fftw3-dev liborc-0.4-dev librsvg2-dev && \
+  libgsf-1-dev fftw3-dev liborc-0.4-dev librsvg2-dev
 
-  # Build libvips
+# Install libvips
+RUN \
   cd /tmp && \
-  curl -O http://www.vips.ecs.soton.ac.uk/supported/$LIBVIPS_VERSION_MAJOR.$LIBVIPS_VERSION_MINOR/vips-$LIBVIPS_VERSION.tar.gz && \
-  #curl -O http://www.vips.ecs.soton.ac.uk/supported/$LIBVIPS_VERSION_MAJOR.$LIBVIPS_VERSION_MINOR/vips-$LIBVIPS_VERSION.tar.gz && \
+  curl -O -L -C - https://github.com/jcupitt/libvips/releases/download/v$LIBVIPS_VERSION/vips-$LIBVIPS_VERSION.tar.gz && \
   tar zvxf vips-$LIBVIPS_VERSION.tar.gz && \
   cd /tmp/vips-$LIBVIPS_VERSION && \
   ./configure --enable-debug=no --without-python $1 && \
@@ -36,12 +36,16 @@ RUN \
   make install && \
   ldconfig
 
+# Install tnvm
+RUN \
+  wget -O- https://raw.githubusercontent.com/aliyun-node/tnvm/master/install.sh | bash && \
+  # source $HOME/.bashrc && \
+  . $TNVM_DIR/tnvm.sh && \
+  tnvm install alinode-v$ALINODE_VERSION && \
+  tnvm use alinode-v$ALINODE_VERSION
 
-# Bundle app source
-COPY . /usr/src/app
-RUN echo "node: " $(node -v) && \
-  echo "npm: " $(npm -v) && \
-  npm install --registry=https://registry.npm.taobao.org
+# Update PATH
+ENV PATH $TNVM_DIR/versions/alinode/v$ALINODE_VERSION/bin:$PATH
 
 # Clean up
 RUN \
@@ -51,3 +55,16 @@ RUN \
   apt-get autoclean && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Init app
+COPY . /usr/src/app
+WORKDIR /usr/src/app
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD [ "npm", "start" ]
+
+# Install node deps
+RUN \
+  # npm, agentx, commandx
+  # npm install -g npm && \
+  npm install -g agentx commandx && \
+  npm install
