@@ -32,16 +32,23 @@ Object.defineProperty(shotCounts, 'total', {
     }
 });
 
-const makeshot = function(cfg, hooks) {
+const makeshot = (cfg, hooks) => {
+    const startTimestamp = Date.now();
     let client = null;
 
-    const traceInfo = function(type, metadata) {
+    const traceInfo = (type, metadata) => {
         const msg = `Makeshot.${type}`;
+        const elapsed = Date.now() - startTimestamp;
+        const lastMs = traceInfo.lastMs || 0;
+
+        traceInfo.lastMs = elapsed;
 
         return logger.info(msg, lodash.assign({
-            selector: cfg.wrapSelector,
+            shot_id: cfg.id,
             shot_url: cfg.url,
-            shot_id: cfg.id
+            selector: cfg.wrapSelector,
+            last_elasped: elapsed - lastMs,
+            elapsed: elapsed
         }, metadata));
     };
 
