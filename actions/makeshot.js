@@ -22,7 +22,10 @@ const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 10000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
 
-const countSharedPath = path.join(process.env.OUT_PATH, '.counts');
+// ensure OUT_PATH
+fsp.ensureDirSync(env.OUT_PATH);
+
+const countSharedPath = path.join(env.OUT_PATH, '.counts');
 const sharedData = new Shared.Create(countSharedPath, 10);
 
 // Erase mem shared
