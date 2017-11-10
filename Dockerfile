@@ -56,6 +56,10 @@ RUN \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Health check
+HEALTHCHECK --timeout=20s \
+  CMD curl --silent --fail localhost:3007/status || exit 1
+
 # Init app
 COPY . /usr/src/app
 WORKDIR /usr/src/app
