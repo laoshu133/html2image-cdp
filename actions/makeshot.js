@@ -2,6 +2,7 @@
  * actions/makeshot
  */
 
+const os = require('os');
 const path = require('path');
 const sharp = require('sharp');
 const lodash = require('lodash');
@@ -25,7 +26,8 @@ const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
 // ensure OUT_PATH
 fsp.ensureDirSync(env.OUT_PATH);
 
-const countSharedPath = path.join(env.OUT_PATH, '.counts');
+const countsFilename = `.counts-${os.hostname()}-${process.pid}`;
+const countSharedPath = path.join(env.OUT_PATH, countsFilename);
 const sharedData = new Shared.Create(countSharedPath, 10);
 
 // Erase mem shared
@@ -530,9 +532,21 @@ const makeshot = (cfg, hooks) => {
 
     // Check clean
     .tap(() => {
-        if(shotCounts.total % SHOT_CACHE_CHECK_INTERVAL === 0) {
-            return clearTimeoutShots();
+        if(shotCounts.total % SHOT_CACHE_CHECK_INTERVAL !== 0) {
+            return;
         }
+
+        return clearTimeoutShots()
+        .then(removedIds => {
+            traceInfo('clearTimeoutShots', {
+                removedIds
+            });
+        })
+        .catch(ex => {
+            traceInfo('clearTimeoutShots.error', {
+                stack: ex.stack || ex.message
+            });
+        });
     })
 
     // Count
