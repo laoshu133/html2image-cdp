@@ -14,6 +14,7 @@ const path = require('path');
 
 // logger
 const logger = require('./services/logger');
+const exitHandler = require('./services/exit-handler');
 
 // init app, whit proxy
 const app = new Koa();
@@ -79,20 +80,12 @@ onerror(app, {
         return type;
     },
     json(err) {
-        let data = app.handleError(err, this);
+        const data = app.handleError(err, this);
 
         this.body = data;
     },
     html(err) {
-        let data = app.handleError(err, this);
-
-        // this.body = this.render('error', {
-        //     env: process.env,
-        //     error: err.message,
-        //     status: this.status,
-        //     code: err.code,
-        //     data: data
-        // });
+        const data = app.handleError(err, this);
 
         this.body = `<!DOCTYPE html><html>
             <head><meta charset="UTF-8"/><title>${this.status} ${err.message}</title></head><body>
@@ -128,17 +121,27 @@ app.on('error', (err, ctx) => {
     logger.error(err, err.data);
 });
 
-// process.crash
-process.on('uncaughtException', ex => {
-    logger.info(ex.message, null, 'app.crashed');
-    logger.error(ex);
-
-    process.exit(1);
+// defalut exit handler
+const exitWithCleanupHandler = exitHandler.bind(null, {
+    skipClean: false
 });
 
+// process crash
+process.on('uncaughtException', exitWithCleanupHandler);
 
-// start up
-let port = process.env.PORT || 3007;
+// Ctrl+C
+process.on('SIGINT', exitWithCleanupHandler);
+
+// // catches "kill pid" (for example: nodemon restart)
+// process.on('SIGUSR1', exitWithCleanupHandler);
+// process.on('SIGUSR2', exitWithCleanupHandler);
+
+// exit event
+process.on('exit', exitWithCleanupHandler);
+
+
+// startup
+const port = process.env.PORT || 3007;
 
 app.listen(port);
 logger.info('Server Start...', {
