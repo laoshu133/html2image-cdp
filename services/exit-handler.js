@@ -4,11 +4,10 @@
 
 const Promise = require('bluebird');
 
-const bridge = require('./bridge');
 const logger = require('./logger');
 
 const exitHandler = ({
-    skipClean = false
+    cleanup = null
 } = {}, err) => {
     let exitCode = +err || 0;
 
@@ -16,17 +15,19 @@ const exitHandler = ({
         logger.info(err.message, null, 'app.crashed');
         logger.error(err);
 
-        exitCode = err.code || 1;
+        exitCode = +err.code || 1;
     }
 
     // console.log(`app exit with code: ${exitCode}`);
 
-    Promise.try(() => {
-        if(skipClean) {
-            return;
-        }
+    if(!cleanup) {
+        process.exit(exitCode);
 
-        return bridge.removeAllClients(true);
+        return;
+    }
+
+    Promise.try(() => {
+        return cleanup();
     })
     .then(() => {
         process.exit(exitCode);

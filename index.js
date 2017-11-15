@@ -123,7 +123,11 @@ app.on('error', (err, ctx) => {
 
 // defalut exit handler
 const exitWithCleanupHandler = exitHandler.bind(null, {
-    skipClean: false
+    cleanup() {
+        const bridge = require('./services/bridge');
+
+        return bridge.removeAllClients(true);
+    }
 });
 
 // process crash
