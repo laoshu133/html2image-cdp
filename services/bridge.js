@@ -2,14 +2,15 @@
  * bridge
  */
 
-const BridgeBase = require('../lib/bridge');
+// const BridgeBase = require('../lib/bridge');
+const Bridge = require('../lib/bridge');
 
-class Bridge extends BridgeBase {
-    constructor(...args) {
-        super(...args);
+// class Bridge extends BridgeBase {
+//     constructor(...args) {
+//         super(...args);
 
-        this.clients = [];
-    }
-}
+//         this.clients = [];
+//     }
+// }
 
 module.exports = new Bridge(process.env.CDP_HOST);
