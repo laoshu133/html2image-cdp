@@ -3,24 +3,32 @@
  *
  */
 
-const Promise = require('bluebird');
-
 const bridge = require('../services/bridge');
 
-module.exports = function(router) {
+module.exports = router => {
+    const POWER = 1;
+
     router.get('/reset', function *() {
-        if(+this.query.force !== 1) {
+        const force = +this.query.force || 0;
+
+        if(force < POWER) {
             this.throw(403, 'Not allowed');
         }
 
-        const targets = yield bridge.getTargets();
+        // Reset clients
+        const clients = yield bridge.removeAllClients(true);
 
-        yield Promise.mapSeries(targets, target => {
-            return bridge.closeClientById(target.id);
-        });
+        // Reset targets
+        const targets = force > POWER
+            ? yield bridge.closeAllTargets()
+            : [];
 
-        yield bridge.syncClients();
-
-        this.body = targets;
+        this.body = {
+            status: 'success',
+            clients: clients.map(client => {
+                return client.target;
+            }),
+            targets
+        };
     });
 };
