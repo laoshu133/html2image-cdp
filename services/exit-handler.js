@@ -28,8 +28,11 @@ const exitHandler = ({
 
         return bridge.removeAllClients(true);
     })
-    .finally(() => {
+    .then(() => {
         process.exit(exitCode);
+    })
+    .catch(() => {
+        process.exit(exitCode !== 0 ? exitCode : 1);
     });
 };
 
