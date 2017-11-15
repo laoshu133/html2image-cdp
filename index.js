@@ -141,13 +141,19 @@ process.on('exit', exitWithCleanupHandler);
 
 
 // startup
-const port = process.env.PORT || 3007;
+app.port = process.env.PORT || 3007;
+app.listen(app.port, () => {
+    // ready message
+    if(process.send) {
+        process.send('ready');
+    }
 
-app.listen(port);
-logger.info('Server Start...', {
-    port: port,
-    www: 'http://' + process.env.WWW_HOST
+    logger.info('Server Start...', {
+        port: app.port,
+        www_url: 'http://' + process.env.WWW_HOST
+    });
 });
+
 
 // exports
 module.exports = app;
