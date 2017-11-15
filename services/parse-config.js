@@ -7,7 +7,9 @@ const lodash = require('lodash');
 const fsp = require('fs-promise');
 const Promise = require('bluebird');
 
+const uid = require('../lib/uid');
 const fill = require('../lib/fill');
+const randomString = require('../lib/random-string');
 const prettyDate = require('./pretty-date');
 
 const SHOT_HTML_TPL_PATH = path.resolve(__dirname, '..', process.env.SHOT_HTML_TPL_PATH);
@@ -29,8 +31,6 @@ const getLocalConfigPromise = Promise.try(() => {
     return lodash.merge({}, defaultConfig, config);
 });
 
-// uuid
-let uuid = 0;
 
 module.exports = function(cfg) {
     return Promise.try(() => {
@@ -44,14 +44,15 @@ module.exports = function(cfg) {
 
         // id
         if(!cfg.id) {
+            const rndLen = 5;
             const notNumber = /[^\d]+/g;
             const nowStr = prettyDate(new Date());
 
             cfg.id = [
                 action,
-                process.pid,
+                uid(),
                 nowStr.replace(notNumber, ''),
-                ++uuid
+                randomString(rndLen)
             ].join('_');
         }
 
