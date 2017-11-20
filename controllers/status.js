@@ -3,6 +3,7 @@
  *
  */
 
+const os = require('os');
 const bridge = require('../services/bridge');
 const prettyDate = require('../services/pretty-date');
 
@@ -21,6 +22,7 @@ module.exports = function(router) {
 
         // 多进程运行时部分数据非实时
         const data = {
+            hostname: os.hostname(),
             host: process.env.WWW_HOST,
             process_id: process.pid,
             uptime: Date.now() - serverStartTime,
