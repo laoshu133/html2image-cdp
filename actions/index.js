@@ -5,5 +5,6 @@
 
 module.exports = {
     makeshot: require('./makeshot'),
-    debug: require('./debug')
+    debug: require('./debug'),
+    ssr: require('./ssr')
 };

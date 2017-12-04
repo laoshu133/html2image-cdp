@@ -75,16 +75,307 @@ const makeshot = (cfg, hooks) => {
 
         return logger.info(msg, lodash.assign({
             shot_id: cfg.id,
-            shot_url: cfg.url,
-            selector: cfg.wrapSelector,
+            // shot_url: cfg.url,
+            // selector: cfg.wrapSelector,
             last_elasped: elapsed - lastMs,
             elapsed: elapsed
         }, metadata));
     };
 
+    const calcRects = (nodes = []) => {
+        if(cfg.skipImagesShot) {
+            return Promise.resolve([]);
+        }
+
+        return Promise.try(() => {
+            traceInfo('page.startClacRects');
+
+            return Promise.map(nodes, nodeId => {
+                return client.getBoxModel(nodeId);
+            });
+        })
+        .map((model, idx) => {
+            const ret = {
+                top: Infinity,
+                left: Infinity,
+                right: -Infinity,
+                bottom: -Infinity,
+                height: 0,
+                width: 0
+            };
+
+            // consider rotate
+            model.border.forEach((val, idx) => {
+                if(idx % 2 === 0) {
+                    if(val < ret.left) {
+                        ret.left = val;
+                    }
+                    else if(val > ret.right) {
+                        ret.right = val;
+                    }
+                }
+                else {
+                    if(val < ret.top) {
+                        ret.top = val;
+                    }
+                    else if(val > ret.bottom) {
+                        ret.bottom = val;
+                    }
+                }
+            });
+
+            // Ensure rect has size
+            ret.height = Math.max(1, ret.bottom - ret.top);
+            ret.width = Math.max(1, ret.right - ret.left);
+
+            traceInfo(`page.getClipRect-${idx}`, ret);
+
+            return ret;
+        })
+        // Filter
+        .then(models => {
+            if(cfg.wrapMaxCount > 0) {
+                return models.slice(0, cfg.wrapMaxCount);
+            }
+
+            return models;
+        });
+    };
+
+    const shotImages = (rects = []) => {
+        if(cfg.skipImagesShot) {
+            return Promise.resolve([]);
+        }
+
+        return Promise.try(() => {
+            return rects;
+        })
+        // hook: beforeShot
+        .tap(() => {
+            return hooks.beforeShot(client);
+        })
+        // Clac viewport
+        .tap(rects => {
+            const viewport = cfg.viewport;
+            let viewHeight = viewport[1];
+            let viewWidth = viewport[0];
+
+            // x use right, y use height by elem.scrollIntoView
+            rects.forEach(rect => {
+                if(rect.right > viewWidth) {
+                    viewWidth = rect.right;
+                }
+                if(rect.height > viewHeight) {
+                    viewHeight = rect.height;
+                }
+            });
+
+            // log
+            traceInfo('client.setVisibleSize', {
+                visibleSize: [viewWidth, viewHeight],
+                viewport: viewport
+            });
+
+            if(viewWidth > SHOT_IMAGE_MAX_WIDTH || viewHeight > SHOT_IMAGE_MAX_HEIGHT) {
+                const maxSize = `${SHOT_IMAGE_MAX_WIDTH}x${SHOT_IMAGE_MAX_HEIGHT}`;
+
+                throw new Error(`Request Image size is out of limit: ${maxSize}`);
+            }
+
+            return client.getVisibleSize()
+            .then(size => {
+                if(viewWidth > size.width || viewHeight > size.height) {
+                    const height = Math.max(viewHeight, size.height);
+                    const width = Math.max(viewWidth, size.width);
+
+                    return client.setVisibleSize(width, height);
+                }
+            });
+        })
+        // Set background color
+        .tap(() => {
+            const isPng = cfg.out.imageType === 'png';
+            const backgroundColor = isPng ? '#00000000' : '#FFFFFFFF';
+
+            traceInfo('page.setBackgorundColor', {
+                color: cfg.backgroundColor || backgroundColor
+            });
+
+            return client.setBackgroundColor(backgroundColor);
+        })
+
+        // Focus element and Screenshot
+        .mapSeries((rect, idx) => {
+            const cropRect = {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height
+            };
+            const ret = {
+                cropRect,
+                rect
+            };
+
+            const focusElementCode = `
+                var elems = document.querySelectorAll('${cfg.wrapSelector}');
+                var elem = elems[${idx}];
+                var offset = [0, 0];
+                var data = {
+                    visibleSize: [window.innerWidth, window.innerHeight],
+                    elementOffset: offset
+                };
+
+                if(elem) {
+                    elem.scrollIntoView();
+
+                    var rect = elem.getBoundingClientRect();
+
+                    offset[0] = rect.left;
+                    offset[1] = rect.top;
+                }
+
+                JSON.stringify(data);
+            `;
+
+            // Set page scale
+            // @TODO: 目前无效，待支持矢量缩放
+            return Promise.try(() => {
+                // return client.setPageScaleFactor(0.5);
+            })
+            // Focus element and get offset
+            .then(() => {
+                return client.evaluate(focusElementCode);
+            })
+            .then(result => {
+                const data = JSON.parse(result.value);
+                const offset = data.elementOffset || [0, 0];
+
+                // Fix crop offset
+                cropRect.left = Math.floor(offset[0]) || 0;
+                cropRect.top = Math.floor(offset[1]) || 0;
+
+                traceInfo('client.captureScreenshot-' + idx, {
+                    elementOffset: data.elementOffset,
+                    visibleSize: data.visibleSize,
+                    cropRect: cropRect
+                });
+
+                return client.captureScreenshot({
+                    // @TODO: 目前无效，待优化
+                    // clip: {
+                    //     height: cropRect.height,
+                    //     width: cropRect.width,
+                    //     y: cropRect.y,
+                    //     x: cropRect.x,
+                    //     scale: 1
+                    // },
+                    fromSurface: true,
+                    format: 'png'
+                });
+            })
+            .tap(buf => {
+                traceInfo('client.captureScreenshot.done-' + idx, {
+                    bufferLength: buf.length
+                });
+            })
+            .then(buf => {
+                ret.image = buf;
+
+                return ret;
+            });
+        })
+
+        // Extract image
+        .map(({image, rect, cropRect}, idx) => {
+            traceInfo(`client.processImage-${idx}`, { cropRect });
+
+            image = sharp(image).extract(cropRect);
+
+            const imageSize = cfg.imageSize || {};
+            const imageWidth = +imageSize.width || null;
+            const imageHeight = +imageSize.height || null;
+            if(imageWidth || imageHeight) {
+                const cropStrategies = sharp.gravity;
+                const oldStrategiesMap = {
+                    10: cropStrategies.north,
+                    11: cropStrategies.northwest,
+                    12: cropStrategies.northeast
+                };
+
+                let strategy = imageSize.type || imageSize.strategy;
+
+                strategy = oldStrategiesMap[strategy] || cropStrategies[strategy];
+                if(!strategy) {
+                    strategy = cropStrategies.north;
+                }
+
+                image = image.resize(imageWidth, imageHeight);
+                image = image.crop(strategy);
+            }
+
+            return { image, rect };
+        }, {
+            concurrency: cpuCount
+        })
+
+        // hooks: afterShot
+        .tap(images => {
+            return hooks.afterShot(images);
+        });
+    };
+
+    const optimizeImages = (images = []) => {
+        return Promise.try(() => {
+            traceInfo('client.optimizeImages', {
+                imageQuality: cfg.imageQuality,
+                imageSize: cfg.imageSize,
+                imageCount: images.length
+            });
+
+            return images;
+        })
+
+        // hooks: beforeOptimize
+        .tap(() => {
+            return hooks.beforeOptimize(images);
+        })
+
+        // Optimize image
+        .map(({image, rect}) => {
+            const imageType = cfg.out.imageType;
+            const imageQuality = cfg.imageQuality;
+
+            if(imageType === 'png') {
+                const level = Math.floor(10 - imageQuality / 10);
+
+                image = image.png({
+                    compressionLevel: Math.max(0, Math.min(9, level)),
+                    progressive: false
+                });
+            }
+            else {
+                image = image.jpeg({
+                    quality: imageQuality,
+                    progressive: false
+                });
+            }
+
+            return { image, rect };
+        }, {
+            concurrency: cpuCount
+        })
+
+        // hooks: afterOptimize
+        .tap(images => {
+            return hooks.afterOptimize(images);
+        });
+    };
+
     // hooks
     hooks = lodash.defaults(hooks, {
         beforeCheck: lodash.noop,
+        afterCheck: lodash.noop,
         beforeShot: lodash.noop,
         afterShot: lodash.noop,
         beforeOptimize: lodash.noop,
@@ -141,6 +432,8 @@ const makeshot = (cfg, hooks) => {
             .then(result => {
                 const state = result.value;
                 if(state === 'complete' || state === 'interactive') {
+                    traceInfo('page.loaded');
+
                     resolve();
 
                     return;
@@ -153,12 +446,17 @@ const makeshot = (cfg, hooks) => {
             interval: 100
         });
     })
-    .then(() => {
+
+    // delay render
+    .delay(Math.min(1000, cfg.renderDelay))
+
+    // hook: beforeCheck
+    .tap(() => {
         traceInfo('page.check');
 
-        // hook: beforeCheck
         return hooks.beforeCheck(client);
     })
+
     // check wrap count
     .then(() => {
         const selector = cfg.wrapSelector;
@@ -192,198 +490,23 @@ const makeshot = (cfg, hooks) => {
         });
     })
 
-    // hook: beforeShot
-    .tap(() => {
-        return hooks.beforeShot(client);
+    // hook: afterCheck
+    .tap(nodes => {
+        traceInfo('page.check.done');
+
+        return hooks.afterCheck(nodes, client);
     })
 
     // clac rects
-    .tap(() => {
-        traceInfo('page.startClacRects');
-    })
-    .map(nodeId => {
-        return client.getBoxModel(nodeId);
-    })
-    .map((model, idx) => {
-        const ret = {
-            top: Infinity,
-            left: Infinity,
-            right: -Infinity,
-            bottom: -Infinity,
-            height: 0,
-            width: 0
-        };
-
-        // consider rotate
-        model.border.forEach((val, idx) => {
-            if(idx % 2 === 0) {
-                if(val < ret.left) {
-                    ret.left = val;
-                }
-                else if(val > ret.right) {
-                    ret.right = val;
-                }
-            }
-            else {
-                if(val < ret.top) {
-                    ret.top = val;
-                }
-                else if(val > ret.bottom) {
-                    ret.bottom = val;
-                }
-            }
-        });
-
-        // Ensure rect has size
-        ret.height = Math.max(1, ret.bottom - ret.top);
-        ret.width = Math.max(1, ret.right - ret.left);
-
-        traceInfo(`page.getClipRect-${idx}`, ret);
-
-        return ret;
-    })
-    // Filter
-    .then(models => {
-        if(cfg.wrapMaxCount > 0) {
-            return models.slice(0, cfg.wrapMaxCount);
-        }
-
-        return models;
-    })
-    // delay render
-    .delay(Math.min(1000, cfg.renderDelay))
-
-    // Clac viewport
-    .tap(rects => {
-        const viewport = cfg.viewport;
-        let viewHeight = viewport[1];
-        let viewWidth = viewport[0];
-
-        // x use right, y use height by elem.scrollIntoView
-        rects.forEach(rect => {
-            if(rect.right > viewWidth) {
-                viewWidth = rect.right;
-            }
-            if(rect.height > viewHeight) {
-                viewHeight = rect.height;
-            }
-        });
-
-        // log
-        traceInfo('client.setVisibleSize', {
-            visibleSize: [viewWidth, viewHeight],
-            viewport: viewport
-        });
-
-        if(viewWidth > SHOT_IMAGE_MAX_WIDTH || viewHeight > SHOT_IMAGE_MAX_HEIGHT) {
-            const maxSize = `${SHOT_IMAGE_MAX_WIDTH}x${SHOT_IMAGE_MAX_HEIGHT}`;
-
-            throw new Error(`Request Image size is out of limit: ${maxSize}`);
-        }
-
-        return client.getVisibleSize()
-        .then(size => {
-            if(viewWidth > size.width || viewHeight > size.height) {
-                const height = Math.max(viewHeight, size.height);
-                const width = Math.max(viewWidth, size.width);
-
-                return client.setVisibleSize(width, height);
-            }
-        });
-    })
-    // Set background color
-    .tap(() => {
-        const isPng = cfg.out.imageType === 'png';
-        const backgroundColor = isPng ? '#00000000' : '#FFFFFFFF';
-
-        traceInfo('page.setBackgorundColor', {
-            color: cfg.backgroundColor || backgroundColor
-        });
-
-        return client.setBackgroundColor(backgroundColor);
+    .then(nodes => {
+        return calcRects(nodes);
     })
 
-    // Focus element and Screenshot
-    .mapSeries((rect, idx) => {
-        const cropRect = {
-            top: rect.top,
-            left: rect.left,
-            width: rect.width,
-            height: rect.height
-        };
-        const ret = {
-            cropRect,
-            rect
-        };
-
-        const focusElementCode = `
-            var elems = document.querySelectorAll('${cfg.wrapSelector}');
-            var elem = elems[${idx}];
-            var offset = [0, 0];
-            var data = {
-                visibleSize: [window.innerWidth, window.innerHeight],
-                elementOffset: offset
-            };
-
-            if(elem) {
-                elem.scrollIntoView();
-
-                var rect = elem.getBoundingClientRect();
-
-                offset[0] = rect.left;
-                offset[1] = rect.top;
-            }
-
-            JSON.stringify(data);
-        `;
-
-        // Set page scale
-        // @TODO: 目前无效，待支持矢量缩放
-        return Promise.try(() => {
-            // return client.setPageScaleFactor(0.5);
-        })
-        // Focus element and get offset
-        .then(() => {
-            return client.evaluate(focusElementCode);
-        })
-        .then(result => {
-            const data = JSON.parse(result.value);
-            const offset = data.elementOffset || [0, 0];
-
-            // Fix crop offset
-            cropRect.left = Math.floor(offset[0]) || 0;
-            cropRect.top = Math.floor(offset[1]) || 0;
-
-            traceInfo('client.captureScreenshot-' + idx, {
-                elementOffset: data.elementOffset,
-                visibleSize: data.visibleSize,
-                cropRect: cropRect
-            });
-
-            return client.captureScreenshot({
-                // @TODO: 目前无效，待优化
-                // clip: {
-                //     height: cropRect.height,
-                //     width: cropRect.width,
-                //     y: cropRect.y,
-                //     x: cropRect.x,
-                //     scale: 1
-                // },
-                fromSurface: true,
-                format: 'png'
-            });
-        })
-        .tap(buf => {
-            traceInfo('client.captureScreenshot.done-' + idx, {
-                bufferLength: buf.length
-            });
-        })
-        .then(buf => {
-            ret.image = buf;
-
-            return ret;
-        });
+    // shot images by rects
+    .then(rects => {
+        return shotImages(rects);
     })
+
     // clean
     .finally(() => {
         if(client) {
@@ -393,83 +516,9 @@ const makeshot = (cfg, hooks) => {
         }
     })
 
-    // hooks: afterShot
-    .tap(images => {
-        return hooks.afterShot(images);
-    })
-
-    // Extract image
-    .map(({image, rect, cropRect}, idx) => {
-        traceInfo(`client.processImage-${idx}`, { cropRect });
-
-        image = sharp(image).extract(cropRect);
-
-        const imageSize = cfg.imageSize || {};
-        const imageWidth = +imageSize.width || null;
-        const imageHeight = +imageSize.height || null;
-        if(imageWidth || imageHeight) {
-            const cropStrategies = sharp.gravity;
-            const oldStrategiesMap = {
-                10: cropStrategies.north,
-                11: cropStrategies.northwest,
-                12: cropStrategies.northeast
-            };
-
-            let strategy = imageSize.type || imageSize.strategy;
-
-            strategy = oldStrategiesMap[strategy] || cropStrategies[strategy];
-            if(!strategy) {
-                strategy = cropStrategies.north;
-            }
-
-            image = image.resize(imageWidth, imageHeight);
-            image = image.crop(strategy);
-        }
-
-        return { image, rect };
-    }, {
-        concurrency: cpuCount
-    })
-
-    // hooks: beforeOptimize
-    .tap(images => {
-        traceInfo('client.optimizeImage', {
-            imageQuality: cfg.imageQuality,
-            imageSize: cfg.imageSize,
-            imageCount: images.length
-        });
-
-        return hooks.beforeOptimize(images);
-    })
-
-    // Optimize image
-    .map(({image, rect}) => {
-        const imageType = cfg.out.imageType;
-        const imageQuality = cfg.imageQuality;
-
-        if(imageType === 'png') {
-            const level = Math.floor(10 - imageQuality / 10);
-
-            image = image.png({
-                compressionLevel: Math.max(0, Math.min(9, level)),
-                progressive: false
-            });
-        }
-        else {
-            image = image.jpeg({
-                quality: imageQuality,
-                progressive: false
-            });
-        }
-
-        return { image, rect };
-    }, {
-        concurrency: cpuCount
-    })
-
-    // hooks: afterOptimize
-    .tap(images => {
-        return hooks.afterOptimize(images);
+    // shot images by rects
+    .then(images => {
+        return optimizeImages(images);
     })
 
     // Save images

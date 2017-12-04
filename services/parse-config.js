@@ -66,6 +66,11 @@ module.exports = function(cfg) {
             +viewport[1] || 600
         ];
 
+        // Fix skipImagesShot
+        if(typeof cfg.skipImagesShot !== 'boolean') {
+            cfg.skipImagesShot = cfg.skipImagesShot === 'true';
+        }
+
         // Fix imageQuality
         cfg.imageQuality = parseInt(cfg.imageQuality, 10) || 80;
 
