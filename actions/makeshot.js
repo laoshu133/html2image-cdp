@@ -26,7 +26,7 @@ const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
 // ensure OUT_PATH
 fsp.ensureDirSync(env.OUT_PATH);
 
-const countsFilename = `.counts-${os.hostname()}-${process.pid}`;
+const countsFilename = `.counts-${os.hostname()}`;
 const countSharedPath = path.join(env.OUT_PATH, countsFilename);
 const sharedData = new Shared.Create(countSharedPath, 10);
 
