@@ -75,8 +75,8 @@ const makeshot = (cfg, hooks) => {
 
         return logger.info(msg, lodash.assign({
             shot_id: cfg.id,
-            // shot_url: cfg.url,
-            // selector: cfg.wrapSelector,
+            shot_url: cfg.url,
+            selector: cfg.wrapSelector,
             last_elasped: elapsed - lastMs,
             elapsed: elapsed
         }, metadata));
