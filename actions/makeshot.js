@@ -585,7 +585,8 @@ const makeshot = (cfg, hooks) => {
             return;
         }
 
-        return clearTimeoutShots()
+        // Without return, skip response delay
+        clearTimeoutShots()
         .then(removedIds => {
             traceInfo('clearTimeoutShots', {
                 removedIds
