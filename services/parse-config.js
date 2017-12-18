@@ -51,8 +51,8 @@ module.exports = function(cfg) {
             cfg.id = [
                 action,
                 nowStr.replace(notNumber, ''),
-                uid(),
-                randomString(rndLen)
+                randomString(rndLen),
+                uid()
             ].join('_');
         }
 
