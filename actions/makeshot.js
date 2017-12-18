@@ -18,7 +18,7 @@ const wait = require('../lib/wait-promise');
 
 const env = process.env;
 const CDP_RESOURCE_REQUEST_TIMEOUT = +env.CDP_RESOURCE_REQUEST_TIMEOUT || 10000;
-const SHOT_CACHE_CHECK_INTERVAL = +env.SHOT_CACHE_CHECK_INTERVAL || 100; // 每 N 次检查一次是否需要清理
+const SHOT_CACHE_CHECK_INTERVAL = +env.SHOT_CACHE_CHECK_INTERVAL || 0;
 const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 10000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
@@ -581,7 +581,7 @@ const makeshot = (cfg, hooks) => {
 
     // Check clean
     .tap(() => {
-        if(shotCounts.total % SHOT_CACHE_CHECK_INTERVAL !== 0) {
+        if(!SHOT_CACHE_CHECK_INTERVAL || shotCounts.total % SHOT_CACHE_CHECK_INTERVAL > 0) {
             return;
         }
 
