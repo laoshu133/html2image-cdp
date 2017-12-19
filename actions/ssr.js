@@ -8,7 +8,8 @@ const makeshot = require('./makeshot');
 module.exports = (cfg) => {
     return makeshot(cfg, {
         beforeCheck() {
-            // Do not sht images
+            // Do not shot images
+            cfg.dataType = 'json';
             cfg.skipImagesShot = true;
             cfg.wrapMaxCount = 1;
             cfg.wrapMinCount = 1;
