@@ -31,6 +31,21 @@ const getLocalConfigPromise = Promise.try(() => {
     return lodash.merge({}, defaultConfig, config);
 });
 
+// Switch dir per 10 mins
+const getCurrOutPath = (id = 'tmp') => {
+    const now = Date.now();
+    const interval = 10 * 60 * 1000;
+    const prefixDir = String(Math.floor(now / interval));
+
+    let outPath = process.env.OUT_PATH;
+    if(outPath.charAt(0) !== '/') {
+        outPath = path.resolve('.', outPath);
+    }
+
+    outPath = path.join(outPath, prefixDir, id);
+
+    return outPath;
+};
 
 module.exports = function(cfg) {
     return Promise.try(() => {
@@ -107,18 +122,10 @@ module.exports = function(cfg) {
         }
 
         // out config
-        let cwd = '.';
-        let outDir = cfg.id || 'tmp';
-        let outName = cfg.name || 'out';
-
-        let outPath = process.env.OUT_PATH;
-        if(outPath.charAt(0) !== '/') {
-            outPath = path.join(cwd, outPath);
-        }
-        outPath = path.join(outPath, outDir);
+        const outName = cfg.name || 'out';
+        const outPath = getCurrOutPath(cfg.id);
 
         cfg.out = {
-            name: outDir,
             path: outPath,
             imageType: imgExt === '.png' ? 'png' : 'jpeg',
             image: path.join(outPath, outName + imgExt),

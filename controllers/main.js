@@ -3,7 +3,6 @@
  *
  */
 
-const fs = require('fs');
 const lodash = require('lodash');
 
 const actions = require('../actions/index');
