@@ -3,8 +3,8 @@
  *
  */
 
+const fs = require('fs');
 const lodash = require('lodash');
-const send = require('koa-send');
 
 const actions = require('../actions/index');
 const pathToUrl = require('../services/path-to-url');
@@ -13,6 +13,8 @@ const renderReadme = require('../services/render-readme');
 const logger = require('../services/logger');
 
 module.exports = function(router) {
+    const rPng = /\.png(?:\?|$)/i;
+
     const shotMW = function *() {
         const timestamp = Date.now();
         const body = this.request.body;
@@ -51,7 +53,12 @@ module.exports = function(router) {
 
         // respone image
         if(cfg.dataType === 'image') {
-            return yield send(this, ret.image);
+            const filePath = ret.image.replace(/\?.*/, '');
+
+            this.type = rPng.test(filePath) ? 'image/png' : 'image/jpeg';
+            this.body = fs.createReadStream(filePath);
+
+            return;
         }
 
         // covert result (local path -> url)
