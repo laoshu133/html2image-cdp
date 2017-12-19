@@ -372,6 +372,98 @@ const makeshot = (cfg, hooks) => {
         });
     };
 
+    const saveImages = (images = []) => {
+        const skipImagesShot = cfg.skipImagesShot;
+
+        return Promise.try(() => {
+            if(skipImagesShot) {
+                return;
+            }
+
+            return fsp.ensureDir(cfg.out.path);
+        })
+        .then(() => {
+            return images;
+        })
+        .map(({image, rect}, idx) => {
+            const out = cfg.out;
+            const ext = path.extname(out.image);
+            const name = path.basename(out.image, ext);
+            const outName = name + (idx > 0 ? '-' + (idx + 1) : '');
+            const imagePath = path.join(out.path, `${outName}${ext}`);
+
+            return Promise.try(() => {
+                if(skipImagesShot) {
+                    return;
+                }
+
+                traceInfo(`client.saveImage-${idx}`, {
+                    imageQuality: cfg.imageQuality,
+                    imageSize: cfg.imageSize
+                });
+
+                return image.toFile(imagePath);
+            })
+            .tap(() => {
+                if(!skipImagesShot) {
+                    return;
+                }
+
+                traceInfo(`client.saveImage.done-${idx}`);
+            })
+            .then(() => {
+                return {
+                    imagePath,
+                    image,
+                    rect
+                };
+            });
+        }, {
+            concurrency: cpuCount
+        })
+        // hooks: afterSaveImages
+        .tap(images => {
+            return hooks.afterSaveImages(images);
+        });
+    };
+
+    const exportImages = (images = []) => {
+        const skipImagesShot = cfg.skipImagesShot;
+
+        return Promise.map(images, ({image, rect}, idx) => {
+            const ret = {
+                imageBuffer: null,
+                image,
+                rect
+            };
+
+            if(skipImagesShot) {
+                return ret;
+            }
+
+            traceInfo(`client.exportImage-${idx}`, {
+                imageQuality: cfg.imageQuality,
+                imageSize: cfg.imageSize
+            });
+
+            return Promise.try(() => {
+                return image.toBuffer();
+            })
+            .tap(() => {
+                traceInfo(`client.exportImage.done-${idx}`);
+            })
+            .then(buf => {
+                buf.type = `image/${cfg.out.imageType}`;
+
+                ret.imageBuffer = buf;
+
+                return ret;
+            });
+        }, {
+            concurrency: cpuCount
+        });
+    };
+
     // hooks
     hooks = lodash.defaults(hooks, {
         beforeCheck: lodash.noop,
@@ -522,36 +614,12 @@ const makeshot = (cfg, hooks) => {
     })
 
     // Save images
-    .tap(() => {
-        return fsp.ensureDir(cfg.out.path);
-    })
-    .map(({image, rect}, idx) => {
-        traceInfo(`client.saveImage-${idx}`, {
-            imageQuality: cfg.imageQuality,
-            imageSize: cfg.imageSize
-        });
+    .then(images => {
+        if(cfg.dataType !== 'image') {
+            return saveImages(images);
+        }
 
-        const out = cfg.out;
-        const ext = path.extname(out.image);
-        const name = path.basename(out.image, ext);
-        const outName = name + (idx > 0 ? '-' + (idx + 1) : '');
-        const imagePath = path.join(out.path, `${outName}${ext}`);
-
-        return image.toFile(imagePath)
-        .then(() => {
-            return {
-                imagePath,
-                image,
-                rect
-            };
-        });
-    }, {
-        concurrency: cpuCount
-    })
-
-    // hooks: afterSaveImages
-    .tap(images => {
-        return hooks.afterSaveImages(images);
+        return exportImages(images);
     })
 
     // Format result
@@ -565,7 +633,8 @@ const makeshot = (cfg, hooks) => {
         const images = ret.images = [];
 
         items.forEach(item => {
-            images.push(item.imagePath);
+            images.push(item.imageBuffer ? item.imageBuffer : item.imagePath);
+
             crops.push(item.rect);
         });
 

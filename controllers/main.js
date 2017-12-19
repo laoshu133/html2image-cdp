@@ -13,8 +13,6 @@ const renderReadme = require('../services/render-readme');
 const logger = require('../services/logger');
 
 module.exports = function(router) {
-    const rPng = /\.png(?:\?|$)/i;
-
     const shotMW = function *() {
         const timestamp = Date.now();
         const body = this.request.body;
@@ -53,10 +51,16 @@ module.exports = function(router) {
 
         // respone image
         if(cfg.dataType === 'image') {
-            const filePath = ret.image.replace(/\?.*/, '');
+            const rect = ret.metadata.crops[0];
+            const buf = ret.images[0];
 
-            this.type = rPng.test(filePath) ? 'image/png' : 'image/jpeg';
-            this.body = fs.createReadStream(filePath);
+            this.set('X-Shot-Id', cfg.id);
+            this.set('X-Image-Width', rect.width);
+            this.set('X-Image-Height', rect.height);
+            this.set('X-Elapsed', Date.now() - timestamp);
+
+            this.type = buf.type || 'image/png';
+            this.body = buf;
 
             return;
         }
