@@ -8,7 +8,7 @@ const sharp = require('sharp');
 const lodash = require('lodash');
 const fsp = require('fs-promise');
 const Promise = require('bluebird');
-const Shared = require('mmap-object');
+const sharedCache = require('node-shared-cache');
 
 const cpuCount = require('os').cpus().length;
 const clearTimeoutShots = require('../services/clear-timeout-shots');
@@ -23,17 +23,16 @@ const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 10000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
 
-// ensure OUT_PATH
-fsp.ensureDirSync(env.OUT_PATH);
+const cacheName = os.hostname().slice(0, 16);
+const sharedData = new sharedCache.Cache(cacheName, 524288);
 
-const countsFilename = `.counts-${os.hostname()}`;
-const countSharedPath = path.join(env.OUT_PATH, countsFilename);
-const sharedData = new Shared.Create(countSharedPath, 10);
+// Release mem shared
+const releaseCache = () => {
+    sharedCache.release(cacheName);
+};
 
-// Erase mem shared
-process.on('exit', () => {
-    sharedData.close();
-});
+process.on('uncaughtException', releaseCache);
+process.on('exit', releaseCache);
 
 const shotCounts = Object.defineProperties({}, {
     success: {
