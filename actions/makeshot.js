@@ -670,6 +670,8 @@ const makeshot = (cfg, hooks) => {
     // Count
     .tap(() => {
         shotCounts.success += 1;
+
+        traceInfo('done');
     })
 
     .catch(err => {
