@@ -522,8 +522,10 @@ const makeshot = (cfg, hooks) => {
             return client.evaluate(getDocumentStateCode)
             .then(result => {
                 const state = result.value;
-                if(state === 'complete' || state === 'interactive') {
-                    traceInfo('page.loaded');
+                if(state === 'complete') {
+                    traceInfo('page.loaded', {
+                        readyState: state
+                    });
 
                     resolve();
 
