@@ -165,8 +165,10 @@ module.exports = function(cfg) {
             const html = fill(htmlTpl, cfg);
 
             cfg.contentTemplate = tplName;
-            cfg.url = 'about:blank';
-            cfg.htmlContent = html;
+            cfg.url = 'data:text/html;base64,' + Buffer.from(html).toString('base64');
+            // cfg.url = 'data:text/html,' + html;
+            // cfg.url = 'about:blank';
+            // cfg.htmlContent = html;
 
             return cfg;
         });
