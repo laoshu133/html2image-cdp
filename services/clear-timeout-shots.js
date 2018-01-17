@@ -8,7 +8,7 @@
 const path = require('path');
 const fsp = require('fs-promise');
 const Promise = require('bluebird');
-const rShotId = /^[a-z]+_\d+/i;
+const rShotDir = /^\d+/i;
 
 const OUT_PATH = process.env.OUT_PATH;
 const SHOT_CACHE_MAX_TIMEOUT = +process.env.SHOT_CACHE_MAX_TIMEOUT || 60000;
@@ -20,8 +20,8 @@ module.exports = function() {
         return fsp.readdir(OUT_PATH);
     })
     .filter(name => {
-        if(!rShotId.test(name)) {
-            return;
+        if(!rShotDir.test(name)) {
+            return false;
         }
 
         const shotPath = path.join(OUT_PATH, name);
