@@ -8,6 +8,7 @@ npm-debug.log
 # app
 *.nginx.conf
 /docker-compose.yml
+/docker-compose-auto
 /data
 
 # docs
