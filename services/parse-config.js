@@ -3,8 +3,8 @@
  */
 
 const path = require('path');
+const fsp = require('fs-extra');
 const lodash = require('lodash');
-const fsp = require('fs-promise');
 const Promise = require('bluebird');
 
 const uid = require('../lib/uid');
@@ -19,13 +19,11 @@ const defaultConfig = require('../config.default');
 const localConfig = path.join(__dirname, '../config.json');
 
 const getLocalConfigPromise = Promise.try(() => {
-    return fsp.exists(localConfig);
-})
-.then(exists => {
-    return exists ? fsp.readFile(localConfig) : null;
-})
-.then(buf => {
-    return JSON.parse(buf);
+    if(fsp.existsSync(localConfig)) {
+        return fsp.readJSON(localConfig);
+    }
+
+    return null;
 })
 .then(config => {
     return lodash.merge({}, defaultConfig, config);
@@ -47,7 +45,7 @@ const getCurrOutPath = (id = 'tmp') => {
     return outPath;
 };
 
-module.exports = function(cfg) {
+module.exports = cfg => {
     return Promise.try(() => {
         return getLocalConfigPromise;
     })

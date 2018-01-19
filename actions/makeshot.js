@@ -28,7 +28,10 @@ const sharedData = new sharedCache.Cache(cacheName, 524288);
 
 // Release mem shared
 const releaseCache = () => {
-    sharedCache.release(cacheName);
+    try {
+        sharedCache.release(cacheName);
+    }
+    catch(err) {}
 };
 
 process.on('uncaughtException', releaseCache);
