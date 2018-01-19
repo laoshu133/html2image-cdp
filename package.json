@@ -22,10 +22,10 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.1",
-    "chrome-remote-interface": "^0.22.0",
+    "chrome-remote-interface": "^0.25.5",
     "debug": "^2.6.9",
     "dotenv-safe": "^4.0.4",
-    "fs-promise": "^2.0.3",
+    "fs-extra": "^5.0.0",
     "hlg-logger": "0.0.6",
     "koa": "^1.4.1",
     "koa-bodyparser": "^2.5.0",

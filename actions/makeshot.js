@@ -5,8 +5,8 @@
 const os = require('os');
 const path = require('path');
 const sharp = require('sharp');
+const fsp = require('fs-extra');
 const lodash = require('lodash');
-const fsp = require('fs-promise');
 const Promise = require('bluebird');
 const sharedCache = require('node-shared-cache');
 

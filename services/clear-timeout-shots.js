@@ -6,7 +6,7 @@
  */
 
 const path = require('path');
-const fsp = require('fs-promise');
+const fsp = require('fs-extra');
 const Promise = require('bluebird');
 const rShotDir = /^\d+/i;
 

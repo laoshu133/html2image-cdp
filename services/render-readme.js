@@ -2,8 +2,8 @@
  * render-readme
  */
 
+const fsp = require('fs-extra');
 const lodash = require('lodash');
-const fsp = require('fs-promise');
 
 const pkgs = require('../package.json');
 
