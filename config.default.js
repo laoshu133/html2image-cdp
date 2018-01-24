@@ -6,7 +6,7 @@ module.exports = {
     dataType: 'json', // 返回的数据类型，支持 json 和 image
 
     wrapSelector: 'body', // 截图区域 CSS 选择器，默认 body
-    wrapFindTimeout: 16000, // 等待截图区域出现最大等待时间，默认 16000ms
+    wrapFindTimeout: 10000, // 等待截图区域出现最大等待时间，默认 10s
     wrapMinCount: 1, // 要求截图区域最小数量
     wrapMaxCount: 0, // 要求截图区域最大数量
 
