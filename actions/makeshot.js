@@ -8,7 +8,6 @@ const sharp = require('sharp');
 const fsp = require('fs-extra');
 const lodash = require('lodash');
 const Promise = require('bluebird');
-const sharedCache = require('node-shared-cache');
 
 const cpuCount = require('os').cpus().length;
 const clearTimeoutShots = require('../services/clear-timeout-shots');
@@ -23,38 +22,16 @@ const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 10000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 5000;
 
-const cacheName = os.hostname().slice(0, 16);
-const sharedData = new sharedCache.Cache(cacheName, 524288);
-
-// Release mem shared
-const releaseCache = () => {
-    try {
-        sharedCache.release(cacheName);
-    }
-    catch(err) {}
-};
-
-process.on('uncaughtException', releaseCache);
-process.on('exit', releaseCache);
-
 const shotCounts = Object.defineProperties({}, {
     success: {
         enumerable: true,
-        get() {
-            return sharedData.success || 0;
-        },
-        set(n) {
-            sharedData.success = +n || 0;
-        }
+        writable: true,
+        value: 0
     },
     error: {
         enumerable: true,
-        get() {
-            return sharedData.error || 0;
-        },
-        set(n) {
-            sharedData.error = +n || 0;
-        }
+        writable: true,
+        value: 0
     },
     total: {
         enumerable: true,
