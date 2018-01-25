@@ -1,4 +1,4 @@
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 LABEL maintainer "admin@laoshu133.com"
 
 # Expose
@@ -11,8 +11,8 @@ HEALTHCHECK --timeout=20s \
 # libvips
 ENV LIBVIPS_VERSION 8.5.5
 
-# alinode-v2.2.3 with Node.js v6.11.3
-ENV ALINODE_VERSION 2.2.3
+# alinode-v3.8.4 with Node.js v8.9.4
+ENV ALINODE_VERSION 3.8.4
 ENV TNVM_DIR /root/.tnvm
 
 # Update PATH
