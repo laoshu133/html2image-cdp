@@ -4,12 +4,19 @@ LABEL maintainer "admin@laoshu133.com"
 # Expose
 EXPOSE 3007
 
+# Health check
+HEALTHCHECK --timeout=20s \
+  CMD curl --silent --fail localhost:3007/status || exit 1
+
 # libvips
 ENV LIBVIPS_VERSION 8.5.5
 
 # alinode-v2.2.3 with Node.js v6.11.3
 ENV ALINODE_VERSION 2.2.3
 ENV TNVM_DIR /root/.tnvm
+
+# Update PATH
+ENV PATH $TNVM_DIR/versions/alinode/v$ALINODE_VERSION/bin:$PATH
 
 # Use "bash" as replacement for	"sh"
 # https://github.com/moby/moby/issues/8100#issue-43075601
@@ -44,8 +51,12 @@ RUN \
   tnvm install alinode-v$ALINODE_VERSION && \
   tnvm use alinode-v$ALINODE_VERSION
 
-# Update PATH
-ENV PATH $TNVM_DIR/versions/alinode/v$ALINODE_VERSION/bin:$PATH
+# Install node deps
+RUN \
+  # npm, agentx, commandx
+  # npm install -g npm && \
+  npm install -g agentx commandx && \
+  npm install
 
 # Clean up
 RUN \
@@ -56,19 +67,8 @@ RUN \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Health check
-HEALTHCHECK --timeout=20s \
-  CMD curl --silent --fail localhost:3007/status || exit 1
-
 # Init app
 COPY . /usr/src/app
 WORKDIR /usr/src/app
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD [ "npm", "start" ]
-
-# Install node deps
-RUN \
-  # npm, agentx, commandx
-  # npm install -g npm && \
-  npm install -g agentx commandx && \
-  npm install
