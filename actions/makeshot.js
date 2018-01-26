@@ -107,6 +107,10 @@ const makeshot = (cfg, hooks) => {
             ret.height = Math.max(1, ret.bottom - ret.top);
             ret.width = Math.max(1, ret.right - ret.left);
 
+            // Round down
+            ret.height = Math.floor(ret.height);
+            ret.width = Math.floor(ret.width);
+
             traceInfo(`page.getClipRect-${idx}`, ret);
 
             return ret;
