@@ -1,6 +1,6 @@
 {
   "name": "html2image-cdp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A screenshot server base on Chrome Debugging Protocol interface.",
   "main": "index.js",
   "scripts": {
