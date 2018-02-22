@@ -168,8 +168,8 @@ const makeshot = (cfg, hooks) => {
             return client.getVisibleSize()
             .then(size => {
                 if(viewWidth > size.width || viewHeight > size.height) {
-                    const height = Math.max(viewHeight, size.height);
-                    const width = Math.max(viewWidth, size.width);
+                    const height = Math.round(Math.max(viewHeight, size.height));
+                    const width = Math.round(Math.max(viewWidth, size.width));
 
                     return client.setVisibleSize(width, height);
                 }
