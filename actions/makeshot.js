@@ -2,7 +2,6 @@
  * actions/makeshot
  */
 
-const os = require('os');
 const path = require('path');
 const sharp = require('sharp');
 const fsp = require('fs-extra');
@@ -534,30 +533,44 @@ const makeshot = (cfg, hooks) => {
         return hooks.beforeCheck(client);
     })
 
-    // check wrap count
+    // Check wrap count
     .then(() => {
         const selector = cfg.wrapSelector;
         const minCount = cfg.wrapMinCount;
         const timeout = +cfg.wrapFindTimeout || 1000;
         const maxTimeout = Math.min(SHOT_WAIT_MAX_TIMEOUT, timeout);
+        const errorSelector = cfg.errorSelector;
 
-        return wait((resolve, reject) => {
+        return wait((resolve, reject, abort) => {
             Promise.try(() => {
                 return client.querySelectorAll(selector);
             })
-            .then(({nodeIds}) => {
-                if(nodeIds.length >= minCount) {
-                    return nodeIds;
+            // Check page rendered or error
+            .tap(wrapNodeIds => {
+                const wrapNodeIdsLen = wrapNodeIds.length;
+                if(wrapNodeIdsLen && wrapNodeIdsLen >= minCount) {
+                    return wrapNodeIds;
                 }
 
-                const msg = `Elements not found: ${cfg.wrapSelector}`;
-                const err = new Error(msg);
+                const err = new Error(`Elements not found: ${cfg.wrapSelector}`);
 
-                err.status = 404;
+                return client.querySelectorAll(errorSelector)
+                .then(errorNodeIds => {
+                    if(errorNodeIds.length) {
+                        err.message = `Page render error by ${errorSelector}`;
 
-                throw err;
+                        // Force abort
+                        abort(err);
+                    }
+
+                    err.status = 404;
+
+                    throw err;
+                });
             })
-            .then(resolve)
+            .then(wrapNodeIds => {
+                resolve(wrapNodeIds);
+            })
             .catch(err => {
                 reject(err);
             });
