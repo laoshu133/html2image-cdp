@@ -1,10 +1,10 @@
 {
   "name": "html2image-cdp",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A screenshot server base on Chrome Debugging Protocol interface.",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --debug --ignore test index.js",
+    "dev": "nodemon --inspect --ignore test index.js",
     "start": "node index.js",
     "test": "echo @TODO:..."
   },
