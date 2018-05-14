@@ -4,11 +4,13 @@
  */
 
 const lodash = require('lodash');
+const Promise = require('bluebird');
 
 const actions = require('../actions/index');
 const pathToUrl = require('../services/path-to-url');
 const parseConfig = require('../services/parse-config');
 const renderReadme = require('../services/render-readme');
+const bridge = require('../services/bridge');
 const logger = require('../services/logger');
 
 module.exports = function(router) {
@@ -17,8 +19,16 @@ module.exports = function(router) {
         const body = this.request.body;
         const query = this.query;
 
-        // Guide
+        // Guide and healthy check
         if(/^get|head$/i.test(this.method) && lodash.isEmpty(query)) {
+            const clientVersion = yield Promise.try(() => {
+                return bridge.getClientVersion();
+            })
+            .timeout(1600, 'Fetch bridge version timeout');
+
+            this.set('X-Protocol-Version', clientVersion['Protocol-Version']);
+            this.set('X-Browser-Version', clientVersion.Browser);
+
             this.body = yield renderReadme();
 
             return;
