@@ -18,7 +18,7 @@ module.exports = function(router) {
         const query = this.query;
 
         // Guide
-        if(this.method === 'GET' && lodash.isEmpty(query)) {
+        if(/^get|head$/i.test(this.method) && lodash.isEmpty(query)) {
             this.body = yield renderReadme();
 
             return;
