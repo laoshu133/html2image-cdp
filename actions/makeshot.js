@@ -234,8 +234,8 @@ const makeshot = (cfg, hooks) => {
                 const offset = data.elementOffset || [0, 0];
 
                 // Fix crop offset
-                cropRect.left = Math.floor(offset[0]) || 0;
-                cropRect.top = Math.floor(offset[1]) || 0;
+                cropRect.left = Math.max(0, Math.floor(offset[0]) || 0);
+                cropRect.top = Math.max(0, Math.floor(offset[1]) || 0);
 
                 traceInfo('client.captureScreenshot-' + idx, {
                     elementOffset: data.elementOffset,
