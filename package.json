@@ -26,13 +26,13 @@
     "debug": "^2.6.9",
     "dotenv-safe": "^4.0.4",
     "fs-extra": "^5.0.0",
-    "hlg-logger": "0.0.6",
-    "koa": "^1.4.1",
+    "hlg-logger": "^0.1.1",
+    "koa": "^1.6.0",
     "koa-bodyparser": "^2.5.0",
     "koa-favicon": "^1.2.1",
     "koa-onerror": "^3.1.0",
     "koa-router": "^5.4.2",
-    "lodash": "^4.17.4",
+    "lodash": "^4.17.10",
     "sharp": "^0.18.4"
   }
 }
