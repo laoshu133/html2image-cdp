@@ -60,7 +60,7 @@ const makeshot = (cfg, hooks) => {
         }, metadata));
     };
 
-    const calcRects = (nodes = []) => {
+    const calcRects = () => {
         if(cfg.skipImagesShot) {
             return Promise.resolve([]);
         }
@@ -68,59 +68,46 @@ const makeshot = (cfg, hooks) => {
         return Promise.try(() => {
             traceInfo('page.startClacRects');
 
-            return Promise.map(nodes, nodeId => {
-                return client.getBoxModel(nodeId);
-            });
+            const getClipRectsCode = `
+                var selector = '${cfg.wrapSelector}';
+                var wrapMaxCount = +${cfg.wrapMaxCount} || 0;
+                var elems = [].slice.call(document.querySelectorAll(selector));
+                var len = wrapMaxCount > 0 ? Math.min(wrapMaxCount, elems.length) : elems.length;
+                var clipRects = [];
+
+                for(var i=0; i < len; i++) {
+                    var rect = elems[i].getBoundingClientRect();
+
+                    clipRects.push({
+                        width: rect.width,
+                        height: rect.height,
+                        bottom: rect.bottom,
+                        right: rect.right,
+                        left: rect.left,
+                        top: rect.left
+                    });
+                }
+
+                JSON.stringify(clipRects);
+            `;
+
+            return client.evaluate(getClipRectsCode);
         })
-        .map((model, idx) => {
-            const ret = {
-                top: Infinity,
-                left: Infinity,
-                right: -Infinity,
-                bottom: -Infinity,
-                height: 0,
-                width: 0
-            };
-
-            // consider rotate
-            model.border.forEach((val, idx) => {
-                if(idx % 2 === 0) {
-                    if(val < ret.left) {
-                        ret.left = val;
-                    }
-                    else if(val > ret.right) {
-                        ret.right = val;
-                    }
-                }
-                else {
-                    if(val < ret.top) {
-                        ret.top = val;
-                    }
-                    else if(val > ret.bottom) {
-                        ret.bottom = val;
-                    }
-                }
-            });
-
+        .then(result => {
+            return JSON.parse(result.value);
+        })
+        .map((rect, idx) => {
             // Ensure rect has size
-            ret.height = Math.max(1, ret.bottom - ret.top);
-            ret.width = Math.max(1, ret.right - ret.left);
+            rect.height = Math.max(1, rect.bottom - rect.top);
+            rect.width = Math.max(1, rect.right - rect.left);
 
             // Round down
-            ret.height = Math.floor(ret.height);
-            ret.width = Math.floor(ret.width);
+            rect.height = Math.floor(rect.height);
+            rect.width = Math.floor(rect.width);
 
-            traceInfo(`page.getClipRect-${idx}`, ret);
+            traceInfo(`page.getClipRect-${idx}`, rect);
 
-            return ret;
-        })
-        // Filter
-        .then(models => {
-            if(cfg.wrapMaxCount > 0) {
-                return models.slice(0, cfg.wrapMaxCount);
-            }
-
-            return models;
+            return rect;
         });
     };
 
@@ -588,9 +575,7 @@ const makeshot = (cfg, hooks) => {
     })
 
     // clac rects
-    .then(nodes => {
-        return calcRects(nodes);
-    })
+    .then(calcRects)
 
     // shot images by rects
     .then(rects => {
