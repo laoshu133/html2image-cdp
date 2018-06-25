@@ -97,13 +97,9 @@ const makeshot = (cfg, hooks) => {
             return JSON.parse(result.value);
         })
         .map((rect, idx) => {
-            // Ensure rect has size
-            rect.height = Math.max(1, rect.bottom - rect.top);
-            rect.width = Math.max(1, rect.right - rect.left);
-
-            // Round down
-            rect.height = Math.floor(rect.height);
-            rect.width = Math.floor(rect.width);
+            // Round down and ensure rect has size
+            rect.height = Math.max(1, Math.floor(rect.height));
+            rect.width = Math.max(1, Math.floor(rect.width));
 
             traceInfo(`page.getClipRect-${idx}`, rect);
 
@@ -587,7 +583,7 @@ const makeshot = (cfg, hooks) => {
         if(client) {
             traceInfo('client.release');
 
-            return bridge.releaseClient(client);
+            // return bridge.releaseClient(client);
         }
     })
 
