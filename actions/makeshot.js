@@ -583,7 +583,7 @@ const makeshot = (cfg, hooks) => {
         if(client) {
             traceInfo('client.release');
 
-            // return bridge.releaseClient(client);
+            return bridge.releaseClient(client);
         }
     })
 
