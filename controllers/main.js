@@ -3,6 +3,7 @@
  *
  */
 
+const os = require('os');
 const lodash = require('lodash');
 const Promise = require('bluebird');
 
@@ -20,7 +21,7 @@ module.exports = function(router) {
         const query = this.query;
 
         // Assign base headers
-        this.set('X-Shot-Host', process.env.WWW_HOST);
+        this.set('X-Shot-Host', os.hostname());
 
         // Guide and healthy check
         if(/^get|head$/i.test(this.method) && lodash.isEmpty(query)) {
