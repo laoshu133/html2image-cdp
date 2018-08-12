@@ -22,7 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.1",
-    "chrome-remote-interface": "^0.25.6",
+    "chrome-remote-interface": "^0.26.1",
     "debug": "^2.6.9",
     "dotenv-safe": "^4.0.4",
     "fs-extra": "^5.0.0",
