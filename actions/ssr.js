@@ -18,7 +18,7 @@ module.exports = (cfg) => {
             return client.getDocumentContent()
             .then(html => {
                 if(cfg.out.metadata) {
-                    cfg.out.metadata.html = html;
+                    cfg.out.metadata.html =  `<!DOCTYPE html>${html}`;
                 }
             });
         }
