@@ -516,7 +516,7 @@ const makeshot = (cfg, hooks) => {
         return hooks.beforeCheck(client);
     })
 
-    // Check wrap count
+    // Check render status
     .then(() => {
         const selector = cfg.wrapSelector;
         const minCount = cfg.wrapMinCount;
