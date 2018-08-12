@@ -19,6 +19,9 @@ module.exports = function(router) {
         const body = this.request.body;
         const query = this.query;
 
+        // Assign base headers
+        this.set('X-Shot-Host', process.env.WWW_HOST);
+
         // Guide and healthy check
         if(/^get|head$/i.test(this.method) && lodash.isEmpty(query)) {
             const clientVersion = yield Promise.try(() => {
@@ -37,6 +40,9 @@ module.exports = function(router) {
         // parse config
         const requestCfg = lodash.merge({}, query, body);
         const cfg = yield parseConfig(requestCfg);
+
+        // Assign base headers
+        this.set('X-Shot-Id', cfg.id);
 
         let ret = null;
         if(actions[cfg.action]) {
@@ -63,7 +69,6 @@ module.exports = function(router) {
             const rect = ret.metadata.crops[0];
             const buf = ret.images[0];
 
-            this.set('X-Shot-Id', cfg.id);
             this.set('X-Image-Width', rect.width);
             this.set('X-Image-Height', rect.height);
             this.set('X-Elapsed', Date.now() - timestamp);
