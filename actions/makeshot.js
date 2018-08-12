@@ -525,31 +525,34 @@ const makeshot = (cfg, hooks) => {
         const errorSelector = cfg.errorSelector;
 
         return wait((resolve, reject, abort) => {
-            Promise.try(() => {
-                return client.querySelectorAll(selector);
-            })
-            // Check page rendered or error
-            .tap(wrapNodeIds => {
-                const wrapNodeIdsLen = wrapNodeIds.length;
-                if(wrapNodeIdsLen && wrapNodeIdsLen >= minCount) {
-                    return wrapNodeIds;
-                }
+            const err = new Error(`Elements not found: ${selector}`);
 
-                const err = new Error(`Elements not found: ${cfg.wrapSelector}`);
+            err.status = 404;
 
+            // Check render error first
+            return Promise.try(() => {
                 return client.querySelectorAll(errorSelector)
-                .then(errorNodeIds => {
-                    if(errorNodeIds.length) {
-                        err.message = `Page render error by ${errorSelector}`;
+            })
+            .then(errorNodeIds => {
+                if(errorNodeIds.length) {
+                    err.message = `Page render error by ${errorSelector}`;
 
-                        // Force abort
-                        abort(err);
-                    }
-
-                    err.status = 404;
+                    // Force abort
+                    abort(err);
 
                     throw err;
-                });
+                }
+
+                return client.querySelectorAll(selector);
+            })
+            // Check wrap node count
+            .then(wrapNodeIds => {
+                const wrapNodeIdsLen = wrapNodeIds.length;
+                if(!wrapNodeIdsLen || wrapNodeIdsLen < minCount) {
+                    throw err;
+                }
+
+                return wrapNodeIds;
             })
             .then(wrapNodeIds => {
                 resolve(wrapNodeIds);
