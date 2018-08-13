@@ -523,18 +523,29 @@ const makeshot = (cfg, hooks) => {
         const timeout = +cfg.wrapFindTimeout || 1000;
         const maxTimeout = Math.min(SHOT_WAIT_MAX_TIMEOUT, timeout);
         const errorSelector = cfg.errorSelector;
+        const getCountsCode = `
+            var counts = {
+                error: document.querySelectorAll('${errorSelector}').length,
+                wrap: document.querySelectorAll('${selector}').length
+            };
+
+            JSON.stringify(counts);
+        `;
 
         return wait((resolve, reject, abort) => {
-            const err = new Error(`Elements not found: ${selector}`);
-
-            err.status = 404;
-
-            // Check render error first
             return Promise.try(() => {
-                return client.querySelectorAll(errorSelector)
+                return client.evaluate(getCountsCode);
             })
-            .then(errorNodeIds => {
-                if(errorNodeIds.length) {
+            .then(result => {
+                return JSON.parse(result.value);
+            })
+            .then(counts => {
+                const err = new Error(`Elements not found by ${selector}`);
+
+                err.status = 404;
+
+                // Check render error first
+                if(counts.error) {
                     err.message = `Page render error by ${errorSelector}`;
 
                     // Force abort
@@ -543,23 +554,15 @@ const makeshot = (cfg, hooks) => {
                     throw err;
                 }
 
-                return client.querySelectorAll(selector);
-            })
-            // Check wrap node count
-            .then(wrapNodeIds => {
-                const wrapNodeIdsLen = wrapNodeIds.length;
-                if(!wrapNodeIdsLen || wrapNodeIdsLen < minCount) {
+                // Check wrap node count
+                if(!counts.wrap || counts.wrap < minCount) {
                     throw err;
                 }
 
-                return wrapNodeIds;
+                return counts;
             })
-            .then(wrapNodeIds => {
-                resolve(wrapNodeIds);
-            })
-            .catch(err => {
-                reject(err);
-            });
+            .then(resolve)
+            .catch(reject);
         }, {
             timeout: maxTimeout,
             interval: 100
@@ -567,10 +570,10 @@ const makeshot = (cfg, hooks) => {
     })
 
     // hook: afterCheck
-    .tap(nodes => {
+    .tap(counts => {
         traceInfo('page.check.done');
 
-        return hooks.afterCheck(nodes, client);
+        return hooks.afterCheck(counts);
     })
 
     // clac rects
