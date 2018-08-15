@@ -15,7 +15,6 @@ const logger = require('../services/logger');
 const wait = require('../lib/wait-promise');
 
 const env = process.env;
-const CDP_RESOURCE_REQUEST_TIMEOUT = +env.CDP_RESOURCE_REQUEST_TIMEOUT || 10000;
 const SHOT_CACHE_CHECK_INTERVAL = +env.SHOT_CACHE_CHECK_INTERVAL || 0;
 const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 10000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
@@ -480,34 +479,6 @@ const makeshot = (cfg, hooks) => {
 
         return client.setDocumentContent(cfg.htmlContent);
     })
-    // Wait page loaded
-    .then(() => {
-        const getDocumentStateCode = 'document.readyState';
-
-        return wait((resolve, reject) => {
-            return client.evaluate(getDocumentStateCode)
-            .then(result => {
-                const state = result.value;
-                if(state === 'complete') {
-                    traceInfo('page.loaded', {
-                        readyState: state
-                    });
-
-                    resolve();
-
-                    return;
-                }
-
-                reject(new Error('Page load fialed'));
-            });
-        }, {
-            timeout: CDP_RESOURCE_REQUEST_TIMEOUT,
-            interval: 100
-        });
-    })
-
-    // delay render
-    .delay(Math.min(1000, cfg.renderDelay))
 
     // hook: beforeCheck
     .tap(() => {
@@ -523,29 +494,38 @@ const makeshot = (cfg, hooks) => {
         const timeout = +cfg.wrapFindTimeout || 1000;
         const maxTimeout = Math.min(SHOT_WAIT_MAX_TIMEOUT, timeout);
         const errorSelector = cfg.errorSelector;
-        const getCountsCode = `
-            var counts = {
-                error: document.querySelectorAll('${errorSelector}').length,
-                wrap: document.querySelectorAll('${selector}').length
+        const getRenderStatusDataCode = `
+            var renderStatusData = {
+                errorNodeCount: document.querySelectorAll('${errorSelector}').length,
+                wrapNodeCount: document.querySelectorAll('${selector}').length,
+                readyState: document.readyState
             };
 
-            JSON.stringify(counts);
+            JSON.stringify(renderStatusData);
         `;
 
         return wait((resolve, reject, abort) => {
             return Promise.try(() => {
-                return client.evaluate(getCountsCode);
+                return client.evaluate(getRenderStatusDataCode);
             })
             .then(result => {
                 return JSON.parse(result.value);
             })
-            .then(counts => {
+            .then(statusData => {
                 const err = new Error(`Elements not found by ${selector}`);
 
+                err.statusData = statusData;
                 err.status = 404;
 
+                // Check page load status
+                if(statusData.readyState !== 'complete') {
+                    err.message = `Page load fialed: ${statusData.readyState}`;
+
+                    throw err;
+                }
+
                 // Check render error first
-                if(counts.error) {
+                if(statusData.errorNodeCount) {
                     err.message = `Page render error by ${errorSelector}`;
 
                     // Force abort
@@ -555,29 +535,39 @@ const makeshot = (cfg, hooks) => {
                 }
 
                 // Check wrap node count
-                if(!counts.wrap || counts.wrap < minCount) {
+                if(!statusData.wrapNodeCount || statusData.wrapNodeCount < minCount) {
                     throw err;
                 }
 
-                return counts;
+                return statusData;
             })
             .then(resolve)
             .catch(reject);
         }, {
             timeout: maxTimeout,
             interval: 100
+        })
+        .catch(err => {
+            const statusData = err.statusData || {};
+
+            traceInfo(`page.check.failed: ${err.message}`, statusData);
+
+            throw err;
         });
     })
 
     // hook: afterCheck
-    .tap(counts => {
-        traceInfo('page.check.done');
+    .tap(statusData => {
+        traceInfo('page.check.done', statusData);
 
-        return hooks.afterCheck(counts, client);
+        return hooks.afterCheck(statusData, client);
     })
 
     // clac rects
     .then(calcRects)
+
+    // delay render
+    .delay(Math.min(1000, cfg.renderDelay))
 
     // shot images by rects
     .then(rects => {
