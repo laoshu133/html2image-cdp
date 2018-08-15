@@ -573,7 +573,7 @@ const makeshot = (cfg, hooks) => {
     .tap(counts => {
         traceInfo('page.check.done');
 
-        return hooks.afterCheck(counts);
+        return hooks.afterCheck(counts, client);
     })
 
     // clac rects

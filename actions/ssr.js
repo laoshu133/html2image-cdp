@@ -14,7 +14,7 @@ module.exports = (cfg) => {
             cfg.wrapMaxCount = 1;
             cfg.wrapMinCount = 1;
         },
-        afterCheck(nodes, client) {
+        afterCheck(counts, client) {
             return client.getDocumentContent()
             .then(html => {
                 if(cfg.out.metadata) {
