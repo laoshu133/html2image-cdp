@@ -8,25 +8,35 @@
 const path = require('path');
 const fsp = require('fs-extra');
 const Promise = require('bluebird');
+
+const getOutPath = require('./get-out-path');
+
+const cpuCount = require('os').cpus().length;
+
+const SHOT_CACHE_MAX_TIMEOUT = +process.env.SHOT_CACHE_MAX_TIMEOUT || 60000;
 const rShotDir = /^\d+/i;
 
-const OUT_PATH = process.env.OUT_PATH;
-const SHOT_CACHE_MAX_TIMEOUT = +process.env.SHOT_CACHE_MAX_TIMEOUT || 60000;
-
-module.exports = function() {
+const getTimeoutShots = async () => {
     const now = Date.now();
+    const shotsPath = getOutPath('').realPath;
+    const dirList = await fsp.readdir(shotsPath);
 
-    return Promise.try(() => {
-        return fsp.readdir(OUT_PATH);
-    })
-    .filter(name => {
+    const shotItems = await Promise.map(dirList, name => {
         if(!rShotDir.test(name)) {
+            return null;
+        }
+
+        return path.join(shotsPath, name);
+    })
+    .filter(shotPath => {
+        if(!shotPath) {
             return false;
         }
 
-        const shotPath = path.join(OUT_PATH, name);
-
         return fsp.stat(shotPath)
+        .catch(() => {
+            return false;
+        })
         .then(stats => {
             const elapsed = now - stats.mtime.getTime();
 
@@ -36,15 +46,23 @@ module.exports = function() {
 
             return false;
         });
-    })
-    .map(name => {
-        const shotPath = path.join(OUT_PATH, name);
+    });
 
-        return fsp.remove(shotPath)
-        .then(() => {
-            return name;
-        });
+    return shotItems;
+};
+
+const clearTimeoutShots = async () => {
+    const shotPaths = await getTimeoutShots();
+
+    await Promise.map(shotPaths, shotPath => {
+        return fsp.remove(shotPath);
     }, {
-        concurrency: 5
+        concurrency: cpuCount
+    });
+
+    return shotPaths.map(shotPath => {
+        return path.basename(shotPath);
     });
 };
+
+module.exports = clearTimeoutShots;

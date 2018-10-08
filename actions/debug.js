@@ -1,19 +1,17 @@
 /**
  * actions/debug
- *
  */
 
-const makeshot = require('./makeshot');
+const ShotAction = require('./shot');
 
-module.exports = (cfg) => {
-    return makeshot(cfg, {
-        beforeShot(client) {
-            return client.getDocumentContent()
-            .then(html => {
-                if(cfg.out.metadata) {
-                    cfg.out.metadata.html = html;
-                }
-            });
-        }
-    });
-};
+class DebugAction extends ShotAction {
+    async main(page) {
+        const html = await page.content();
+
+        await super.main(page);
+
+        this.result.metadata.html = html;
+    }
+}
+
+module.exports = DebugAction;

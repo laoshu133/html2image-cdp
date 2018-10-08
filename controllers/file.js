@@ -1,23 +1,37 @@
 /**
  * controllers/file
  *
- * @description get file
+ * @description get file content
  *
  */
 
-const fs = require('fs');
 const path = require('path');
+const fsp = require('fs-extra');
+const getOutPath = require('../services/get-out-path');
 
-module.exports = function(router) {
-    const rPng = /\.png(?:\?|$)/i;
-    const fileRoot = process.env.OUT_PATH;
-    const filePrefix = '/file';
+const extToMimesMap = {
+    pdf: 'application/pdf',
+    jpeg: 'image/jpeg',
+    jpg: 'image/jpeg',
+    png: 'image/png'
+};
 
-    router.get(filePrefix + '/*', function *() {
-        const filePath = this.path.replace(/\?.*/, '').replace(filePrefix, '');
-        const fullPath = path.join(fileRoot, filePath);
+module.exports = router => {
+    const filePrefix = getOutPath('').urlPath;
 
-        this.type = rPng.test(fullPath) ? 'image/png' : 'image/jpeg';
-        this.body = fs.createReadStream(fullPath);
+    router.get(filePrefix + '/*', async (ctx) => {
+        const filePath = ctx.path.replace(/\?.*/, '').replace(filePrefix, '');
+        const ext = path.extname(filePath).replace('.', '');
+        const outPathData = getOutPath(filePath);
+
+        if(!(await fsp.exists(outPathData.realPath))) {
+            ctx.throw(404);
+        }
+
+        if(ext && extToMimesMap[ext]) {
+            ctx.type = extToMimesMap[ext];
+        }
+
+        ctx.body = fsp.createReadStream(outPathData.realPath);
     });
 };

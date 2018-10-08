@@ -6,6 +6,5 @@ module.exports = [
     require('./main'),
     require('./file'),
     require('./status'),
-    require('./clean'),
-    require('./reset')
+    require('./clean')
 ];

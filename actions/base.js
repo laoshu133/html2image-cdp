@@ -11,6 +11,8 @@ class BaseAction extends EventEmitter {
     constructor(cfg = {}, options = {}) {
         super();
 
+        this.result = null;
+
         this.config = cfg;
         this.options = Object.assign({
             bridge,
@@ -29,7 +31,7 @@ class BaseAction extends EventEmitter {
     }
 
     log(type = '', metadata = null) {
-        const msg = `Makeshot.${type}`;
+        const msg = `Shot.${type}`;
 
         this.logger.info(msg, metadata);
     }
@@ -48,10 +50,6 @@ class BaseAction extends EventEmitter {
         });
 
         await page.setDefaultNavigationTimeout(cfg.wrapFindTimeout);
-        await page.setViewport({
-            height: cfg.viewport[1],
-            width: cfg.viewport[0]
-        });
 
         await page.goto(cfg.url, {
             waitUntil: 'load'

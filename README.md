@@ -1,6 +1,6 @@
 # html2image
 
-A screenshot server base on Chrome Debugging Protocol interface.
+A screenshot service, base on Chromeheadless and Puppeteer.
 
 ## 安装与启动
 
@@ -67,8 +67,8 @@ curl -H "Content-type: application/json" -X POST -d '{"url":"http://meiyaapp.com
     url: null, // 待截图的 URL，如果指定 content 此参数无效
     content: '', // 如果指定 content ，将自动根据 htmlTpl 构建 HTML
     contentTemplate: 'default', // content 渲染模板
-    action: 'makeshot', // 动作， 默认 makeshot
     dataType: 'json', // 返回的数据类型，支持 json 和 image
+    action: 'shot', // 动作， 默认 shot
 
     wrapSelector: 'body', // 截图区域 CSS 选择器，默认 body
     wrapFindTimeout: 16000, // 等待截图区域出现最大等待时间，默认 16000ms
@@ -81,7 +81,7 @@ curl -H "Content-type: application/json" -X POST -d '{"url":"http://meiyaapp.com
 
     viewport: null, // 视图宽度，格式 [width, height], 默认 null
     backgroundColor: null, // 视图背景色, 默认 null
-    renderDelay: 32 // 截图前等待时间，默认 32ms
+    renderDelay: 0 // 截图前等待时间，默认 0ms
 }
 ```
 
@@ -120,9 +120,11 @@ curl -H "Content-type: application/json" -X POST -d '{"url":"http://meiyaapp.com
 ```json
 {
     // 第一张图片
-    "image": "http://shot.huanleguang.cn/file/makeshot_1463680442328_1/out.png",
+    "image": "http://shot.huanleguang.cn/file/shot_1463680442328_1/out.png",
     // 截图的图片列表
-    "images": ["http://shot.huanleguang.cn/file/makeshot_1463680442328_1/out.png", "http://shot.huanleguang.cn/file/makeshot_1463680442328_1/out-2.png", "http://shot.huanleguang.cn/file/makeshot_1463680442328_1/out-3.png", "http://shot.huanleguang.cn/file/makeshot_1463680442328_1/out-4.png", "http://shot.huanleguang.cn/file/makeshot_1463680442328_1/out-5.png"],
+    "images": [
+        "http://shot.huanleguang.cn/file/shot_1463680442328_1/out.png", "http://shot.huanleguang.cn/file/shot_1463680442328_1/out-2.png"
+    ],
     // 元数据
     "metadata": {
         // 截图的区域大小
@@ -136,25 +138,10 @@ curl -H "Content-type: application/json" -X POST -d '{"url":"http://meiyaapp.com
             "height": 565.359375,
             "left": 0,
             "top": 1183.125
-        }, {
-            "width": 400,
-            "height": 565.359375,
-            "left": 0,
-            "top": 1748.484375
-        }, {
-            "width": 400,
-            "height": 565.359375,
-            "left": 0,
-            "top": 2313.84375
-        }, {
-            "width": 400,
-            "height": 565.359375,
-            "left": 0,
-            "top": 2879.203125
         }]
     },
     // 截图耗时，毫秒
-    "elapsed": 2182
+    "elapsed": 240
 }
 ```
 

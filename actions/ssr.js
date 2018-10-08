@@ -1,26 +1,19 @@
 /**
  * actions/ssr
- *
  */
 
-const makeshot = require('./makeshot');
+const BaseAction = require('./base');
 
-module.exports = (cfg) => {
-    return makeshot(cfg, {
-        beforeCheck() {
-            // Do not shot images
-            cfg.dataType = 'json';
-            cfg.skipImagesShot = true;
-            cfg.wrapMaxCount = 1;
-            cfg.wrapMinCount = 1;
-        },
-        afterCheck(statusData, client) {
-            return client.getDocumentContent()
-            .then(html => {
-                if(cfg.out.metadata) {
-                    cfg.out.metadata.html = html;
-                }
-            });
-        }
-    });
-};
+class SSR extends BaseAction {
+    async main(page) {
+        const html = await page.content();
+
+        this.result = {
+            metadata: {
+                html
+            }
+        };
+    }
+}
+
+module.exports = SSR;

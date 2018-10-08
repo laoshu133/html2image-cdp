@@ -7,12 +7,14 @@ const fsp = require('fs-extra');
 const lodash = require('lodash');
 const Promise = require('bluebird');
 
-const uid = require('../lib/uid');
+const uuid = require('../lib/uuid');
 const fill = require('../lib/fill');
-const randomString = require('../lib/random-string');
 const prettyDate = require('./pretty-date');
+const env = process.env;
 
-const SHOT_HTML_TPL_PATH = path.resolve(__dirname, '..', process.env.SHOT_HTML_TPL_PATH);
+const SHOT_HTML_TPL_PATH = path.resolve(__dirname, '..', env.SHOT_HTML_TPL_PATH);
+const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
+const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 8000;
 
 // default, local config
 const defaultConfig = require('../config.default');
@@ -53,19 +55,20 @@ module.exports = cfg => {
         return lodash.merge({}, localCfg, cfg);
     })
     .then(cfg => {
-        const action = cfg.action || 'makeshot';
+        // Default action
+        if(!cfg.action || cfg.action === 'makeshot') {
+            cfg.action = 'shot';
+        }
 
         // id
         if(!cfg.id) {
-            const rndLen = 5;
-            const notNumber = /[^\d]+/g;
+            const rNotNumber = /\D+/g;
             const nowStr = prettyDate(new Date());
 
             cfg.id = [
-                action,
-                nowStr.replace(notNumber, ''),
-                randomString(rndLen),
-                uid()
+                cfg.action,
+                nowStr.replace(rNotNumber, ''),
+                uuid()
             ].join('_');
         }
 
@@ -79,15 +82,10 @@ module.exports = cfg => {
             +viewport[1] || 600
         ];
 
-        // Fix skipImagesShot
-        if(typeof cfg.skipImagesShot !== 'boolean') {
-            cfg.skipImagesShot = cfg.skipImagesShot === 'true';
-        }
-
-        // Fix imageQuality
+        // image options
         cfg.imageQuality = parseInt(cfg.imageQuality, 10) || 80;
 
-        // Fix imageSize
+        // imageSize
         let imageSize = cfg.imageSize;
         if(imageSize && typeof imageSize === 'string') {
             let arr = imageSize.split(',');
@@ -97,7 +95,15 @@ module.exports = cfg => {
                 width: +arr[0] || 0
             };
         }
+
         cfg.imageSize = imageSize || null;
+        cfg.maxImageWidth = SHOT_IMAGE_MAX_WIDTH;
+        cfg.maxImageHeight = SHOT_IMAGE_MAX_HEIGHT;
+
+        // wrapMaxCount
+        cfg.wrapMaxCount = cfg.wrapMaxCount > 0
+            ? +cfg.wrapMaxCount
+            : 999;
 
         // Limit output type
         if(cfg.dataType === 'image') {

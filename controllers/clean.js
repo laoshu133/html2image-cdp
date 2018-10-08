@@ -3,16 +3,21 @@
  *
  */
 
-// const makeshot = require('../actions/makeshot');
+const clearTimeoutShots = require('../services/clear-timeout-shots');
 
-module.exports = function(router) {
-    router.get('/clean', function *() {
-        // 超时删除
-        // const removedIds = yield makeshot.clearTimeoutShots();
+module.exports = router => {
+    const POWER = 1;
 
-        const removedIds = [];
+    router.get('/clean', async (ctx) => {
+        const force = +ctx.query.force || 0;
 
-        this.body = {
+        if(force < POWER) {
+            ctx.throw(403, 'Not allowed');
+        }
+
+        const removedIds = await clearTimeoutShots();
+
+        ctx.body = {
             status: 'success',
             removedIds: removedIds
         };

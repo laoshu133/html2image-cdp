@@ -4,7 +4,7 @@
  */
 
 module.exports = {
-    makeshot: require('./makeshot'),
     debug: require('./debug'),
+    shot: require('./shot'),
     ssr: require('./ssr')
 };

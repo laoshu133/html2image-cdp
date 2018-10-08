@@ -1,16 +1,10 @@
 /**
- * bridge
+ * services/bridge
  */
 
-// const BridgeBase = require('../lib/bridge');
 const Bridge = require('../lib/bridge');
 
-// class Bridge extends BridgeBase {
-//     constructor(...args) {
-//         super(...args);
-
-//         this.clients = [];
-//     }
-// }
-
-module.exports = new Bridge(process.env.CDP_HOST);
+module.exports = new Bridge({
+    ignoreHTTPSErrors: process.env.CDP_IGNORE_HTTPS_ERRORS === 'true',
+    browserWSEndpoint: process.env.CDP_ENDPOINT
+});

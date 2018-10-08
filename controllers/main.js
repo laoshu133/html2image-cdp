@@ -4,65 +4,70 @@
  */
 
 const os = require('os');
-const lodash = require('lodash');
-const Promise = require('bluebird');
+const { merge, isEmpty } = require('lodash');
 
-const actions = require('../actions/index');
 const pathToUrl = require('../services/path-to-url');
 const parseConfig = require('../services/parse-config');
 const renderReadme = require('../services/render-readme');
 const bridge = require('../services/bridge');
 const logger = require('../services/logger');
+const Actions = require('../actions');
 
-module.exports = function(router) {
-    const shotMW = function *() {
+const getClientVersion = async () => {
+    if(!getClientVersion.promise) {
+        getClientVersion.promise = bridge.getClientVersion();
+    }
+
+    return getClientVersion.promise;
+};
+
+module.exports = router => {
+    const shotMW = async (ctx) => {
+        const clientVersion = await getClientVersion();
+        const body = ctx.request.body;
         const timestamp = Date.now();
-        const body = this.request.body;
-        const query = this.query;
+        const query = ctx.query;
 
         // Assign base headers
-        this.set('X-Shot-Host', os.hostname());
+        ctx.set('X-Browser-Version', clientVersion.browser);
+        ctx.set('X-Shot-Host', os.hostname());
 
         // Guide and healthy check
-        if(/^get|head$/i.test(this.method) && lodash.isEmpty(query)) {
-            const clientVersion = yield Promise.try(() => {
-                return bridge.getClientVersion();
-            })
-            .timeout(1600, 'Fetch bridge version timeout');
-
-            this.set('X-Protocol-Version', clientVersion['Protocol-Version']);
-            this.set('X-Browser-Version', clientVersion.Browser);
-
-            this.body = yield renderReadme();
+        if(/^get|head$/i.test(ctx.method) && isEmpty(query)) {
+            ctx.body = await renderReadme();
 
             return;
         }
 
         // parse config
-        const requestCfg = lodash.merge({}, query, body);
-        const cfg = yield parseConfig(requestCfg);
+        const requestCfg = merge({}, query, body);
+        const cfg = await parseConfig(requestCfg);
 
         // Assign base headers
-        this.set('X-Shot-Id', cfg.id);
+        ctx.set('X-Shot-Id', cfg.id);
 
         let ret = null;
-        if(actions[cfg.action]) {
+        if(Actions[cfg.action]) {
             logger.info('Main controller init', {
                 shot_id: cfg.id,
                 shot_action: cfg.action,
-                user_agent: this.get('User-Agent'),
-                user_ip: this.ip
+                user_agent: ctx.get('User-Agent'),
+                user_ip: ctx.ip
             });
 
-            ret = yield actions[cfg.action](cfg);
+            const action = new Actions[cfg.action](cfg);
+
+            await action.run();
+
+            ret = action.result;
         }
         else {
-            this.throw(400, 'No action defined: ' + cfg.action);
+            ctx.throw(400, 'No action defined: ' + cfg.action);
         }
 
         // check result
         if(!ret) {
-            this.throw(500, 'Unknow error');
+            ctx.throw(500, 'Unknow error');
         }
 
         // respone image
@@ -70,32 +75,36 @@ module.exports = function(router) {
             const rect = ret.metadata.crops[0];
             const buf = ret.images[0];
 
-            this.set('X-Image-Width', rect.width);
-            this.set('X-Image-Height', rect.height);
-            this.set('X-Elapsed', Date.now() - timestamp);
+            ctx.set('X-Image-Width', rect.width);
+            ctx.set('X-Image-Height', rect.height);
+            ctx.set('X-Elapsed', Date.now() - timestamp);
 
-            this.type = buf.type || 'image/png';
-            this.body = buf;
+            ctx.type = buf.type || 'image/png';
+            ctx.body = buf;
 
             return;
         }
 
         // covert result (local path -> url)
         const result = {
-            id: cfg.id,
-            image: null,
-            images: lodash.map(ret.images, pathToUrl),
-            metadata: ret.metadata || null,
-            // elapsed
-            elapsed: Date.now() - timestamp
+            id: cfg.id
         };
 
         if(ret.images) {
-            result.images = ret.images.map(pathToUrl);
+            result.images = ret.images.map(path => {
+                return pathToUrl(path, ctx);
+            });
+
             result.image = result.images[0] || null;
         }
 
-        this.body = result;
+        // ext data
+        Object.assign(result, {
+            metadata: ret.metadata || null,
+            elapsed: Date.now() - timestamp
+        });
+
+        ctx.body = result;
     };
 
     router.post('/', shotMW);

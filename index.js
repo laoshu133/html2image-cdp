@@ -7,49 +7,34 @@ require('./env');
 
 // deps
 const Koa = require('koa');
+const path = require('path');
 const Router = require('koa-router');
 const favicon = require('koa-favicon');
 const onerror = require('koa-onerror');
-const path = require('path');
+const bodyParser = require('koa-bodyparser');
 
 // logger
 const logger = require('./services/logger');
-const exitHandler = require('./services/exit-handler');
 
 // init app, whit proxy
 const app = new Koa();
+
 app.proxy = true;
 
-// parse request body
-app.use(require('koa-bodyparser')());
-
-// 404
-app.use(function *(next) {
-    yield * next;
-
-    if(this.status === 404 && this.body === undefined) {
-        this.throw(404);
-    }
-});
-
-// favicon
-const WWW_FAVICON = path.join(__dirname, process.env.WWW_FAVICON);
-app.use(favicon(WWW_FAVICON, {
-    // maxAge, 1 month
-    maxAge: 30 * 24 * 60 * 60 * 1000
+// bodyParser
+app.use(bodyParser({
+    formLimit: '1mb',
+    jsonLimit: '1mb'
 }));
 
-// init router
-app.router = new Router();
+// 404
+app.use(async(ctx, next) => {
+    await next();
 
-// controllers
-require('./controllers/index').forEach(ctrlFactory => {
-    ctrlFactory(app.router, app);
+    if(ctx.status === 404 && ctx.body === undefined) {
+        ctx.throw(404);
+    }
 });
-
-// use routers
-app.use(app.router.routes());
-
 
 // Error handle
 app.handleError = function(err, ctx) {
@@ -108,9 +93,12 @@ app.on('error', (err, ctx) => {
         }
     }
 
+    const body = ctx.req.body || ctx.request.body;
     err.data = {
         url: ctx.url,
         method: ctx.method,
+        query: ctx.request.query,
+        body: body ? JSON.stringify(body) : null,
         status: err.status || err.statusCode || ctx.status,
         meta: meta ? JSON.stringify(meta) : null,
         referer: ctx.get('Referer'),
@@ -121,42 +109,56 @@ app.on('error', (err, ctx) => {
     logger.error(err, err.data);
 });
 
-// defalut exit handler
-const exitWithCleanupHandler = exitHandler.bind(null, {
-    cleanup() {
-        const bridge = require('./services/bridge');
+// favicon, maxAge, 1 month
+const WWW_FAVICON = path.join(__dirname, process.env.WWW_FAVICON);
+app.use(favicon(WWW_FAVICON, {
+    maxAge: 30 * 24 * 60 * 60 * 1000
+}));
 
-        return bridge.removeAllClients(true);
-    }
+
+// init router
+app.router = new Router();
+
+// controllers
+require('./controllers/index').forEach(ctrlFactory => {
+    ctrlFactory(app.router, app);
 });
 
-// process crash
-process.on('uncaughtException', exitWithCleanupHandler);
-
-// Ctrl+C
-process.on('SIGINT', exitWithCleanupHandler);
-
-// // catches "kill pid" (for example: nodemon restart)
-// process.on('SIGUSR1', exitWithCleanupHandler);
-// process.on('SIGUSR2', exitWithCleanupHandler);
-
-// exit event
-process.on('exit', exitWithCleanupHandler);
+// use routers
+app.use(app.router.routes());
 
 
 // startup
-app.port = process.env.PORT || 3007;
-app.listen(app.port, () => {
-    // ready message
-    if(process.send) {
-        process.send('ready');
-    }
+app.start = (port = process.env.PORT, host = process.env.IP) => {
+    host = host || '0.0.0.0';
+    port = +port || 3009;
 
-    logger.info('Server Start...', {
-        port: app.port,
-        www_url: 'http://' + process.env.WWW_HOST
+    app.port = port;
+    app.listen(app.port, host, () => {
+        // ready message
+        if(process.send) {
+            process.send('ready');
+        }
+
+        logger.info('Server Start...', {
+            www: 'http://' + process.env.WWW_HOST,
+            port: port
+        });
     });
+};
+
+// process.crash log
+process.on('uncaughtException', ex => {
+    logger.info(`app.crashed: ${ex.stack || ex.message}`);
+    logger.error(ex);
+
+    process.exit(1);
 });
+
+// Run as a server
+if(require.main === module) {
+    app.start();
+}
 
 
 // exports
