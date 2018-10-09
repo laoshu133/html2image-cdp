@@ -2,7 +2,7 @@ module.exports = {
     root: true,
     env: {
         browser: true,
-        mocha: true,
+        jest: true,
         amd: true
     },
     parser: 'babel-eslint',
@@ -15,6 +15,9 @@ module.exports = {
     plugins: [
         'html'
     ],
+    settings: {
+        'html/html-extensions': ['.html', '.vue']
+    },
     // tpl
     // http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting
     rules: {
