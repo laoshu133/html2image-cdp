@@ -3,7 +3,6 @@
  */
 
 const EventEmitter = require('events');
-const { capitalize } = require('lodash');
 
 const logger = require('../services/logger');
 const bridge = require('../services/bridge');
@@ -51,6 +50,22 @@ class BaseAction extends EventEmitter {
         page.on('pageerror', err => {
             pageErrors.push(err);
         });
+
+        // // Debug
+        // page.on('console', msg => {
+        //     const Promise = require('bluebird');
+
+        //     Promise.map(msg.args(), argv => {
+        //         return argv.jsonValue().catch(err => {
+        //             return 'page.console.item.error: ' + err.message;
+        //         });
+        //     })
+        //     .then(args => {
+        //         console.log('\npage.console:');
+        //         console.log(...args);
+        //         console.log('page.console.end\n');
+        //     });
+        // });
     }
 
     async setRequestInterception() {
@@ -91,7 +106,7 @@ class BaseAction extends EventEmitter {
         await page.setDefaultNavigationTimeout(cfg.wrapFindTimeout);
 
         await page.goto(cfg.url, {
-            waitUntil: 'load'
+            // waitUntil: 'load'
         });
 
         if(cfg.htmlContent) {
@@ -129,9 +144,7 @@ class BaseAction extends EventEmitter {
                 const msg = `Page load fialed: ${statusData.readyState}`;
                 const err = new Error(msg);
 
-                err.status = 400;
-
-                throw err;
+                return Promise.reject(err);
             }
 
             // Check render error first
@@ -139,9 +152,7 @@ class BaseAction extends EventEmitter {
                 const msg = `Page render error by ${cfg.errorSelector}`;
                 const err = new Error(msg);
 
-                err.status = 400;
-
-                throw err;
+                return Promise.reject(err);
             }
 
             // Check wrap node count
@@ -155,6 +166,8 @@ class BaseAction extends EventEmitter {
             wrapMinCount: cfg.wrapMinCount
         })
         .catch(err => {
+            err.status = 400;
+
             if(err.message.includes('timeout')) {
                 err.message = `Elements not found by ${cfg.wrapSelector}`;
 
@@ -198,12 +211,13 @@ class BaseAction extends EventEmitter {
             await this.main();
         }
         catch(err) {
-            const pageErrors = this.page.pageErrors.map(err => {
+            const pageErrors = (this.page && this.page.pageErrors) || [];
+            const pageErrorStacks = pageErrors.map(err => {
                 return err.statck || err.message;
             });
 
             this.log(`error: ${err.message}`, {
-                pageErrors: pageErrors.join('\n\n'),
+                pageErrors: pageErrorStacks.join('\n\n'),
                 stack: err.stack
             });
 
