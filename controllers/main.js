@@ -70,6 +70,11 @@ module.exports = router => {
             ctx.throw(500, 'Unknow error');
         }
 
+        // elapsed
+        const elapsed = Date.now() - timestamp;
+
+        ctx.set('X-Elapsed', elapsed);
+
         // respone image
         if(cfg.dataType === 'image') {
             const rect = ret.metadata.crops[0];
@@ -77,9 +82,18 @@ module.exports = router => {
 
             ctx.set('X-Image-Width', rect.width);
             ctx.set('X-Image-Height', rect.height);
-            ctx.set('X-Elapsed', Date.now() - timestamp);
 
             ctx.type = buf.type || 'image/png';
+            ctx.body = buf;
+
+            return;
+        }
+
+        // respone pdf
+        else if(cfg.dataType === 'pdf') {
+            const buf = ret.pdf;
+
+            ctx.type = buf.type || 'application/pdf';
             ctx.body = buf;
 
             return;
@@ -97,11 +111,14 @@ module.exports = router => {
 
             result.image = result.images[0] || null;
         }
+        else if(ret.pdf) {
+            result.pdf = pathToUrl(ret.pdf, ctx);
+        }
 
         // ext data
         Object.assign(result, {
             metadata: ret.metadata || null,
-            elapsed: Date.now() - timestamp
+            elapsed
         });
 
         ctx.body = result;

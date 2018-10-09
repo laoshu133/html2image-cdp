@@ -3,6 +3,7 @@
  */
 
 const EventEmitter = require('events');
+const { capitalize } = require('lodash');
 
 const logger = require('../services/logger');
 const bridge = require('../services/bridge');
@@ -33,7 +34,8 @@ class BaseAction extends EventEmitter {
     }
 
     log(type = '', metadata = null) {
-        const msg = `Shot.${type}`;
+        const cfg = this.config;
+        const msg = `${capitalize(cfg.action)}.${type}`;
 
         this.logger.info(msg, metadata);
     }

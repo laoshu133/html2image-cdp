@@ -82,24 +82,6 @@ module.exports = cfg => {
             +viewport[1] || 600
         ];
 
-        // image options
-        cfg.imageQuality = parseInt(cfg.imageQuality, 10) || 80;
-
-        // imageSize
-        let imageSize = cfg.imageSize;
-        if(imageSize && typeof imageSize === 'string') {
-            let arr = imageSize.split(',');
-
-            imageSize = {
-                height: +arr[1] || 0,
-                width: +arr[0] || 0
-            };
-        }
-
-        cfg.imageSize = imageSize || null;
-        cfg.maxImageWidth = SHOT_IMAGE_MAX_WIDTH;
-        cfg.maxImageHeight = SHOT_IMAGE_MAX_HEIGHT;
-
         // wrapMaxCount
         cfg.wrapMaxCount = cfg.wrapMaxCount > 0
             ? +cfg.wrapMaxCount
@@ -110,6 +92,35 @@ module.exports = cfg => {
             cfg.wrapMaxCount = 1;
         }
 
+        // Pdf limit
+        if(cfg.action === 'shotpdf') {
+            const pdfOptions = Object.assign({
+                printBackground: true
+            }, cfg.pdfOptions || {});
+
+            delete pdfOptions.path;
+
+            cfg.pdfOptions = pdfOptions;
+        }
+        else {
+            cfg.imageQuality = parseInt(cfg.imageQuality, 10) || 80;
+
+            // imageSize
+            let imageSize = cfg.imageSize;
+            if(imageSize && typeof imageSize === 'string') {
+                let arr = imageSize.split(',');
+
+                imageSize = {
+                    height: +arr[1] || 0,
+                    width: +arr[0] || 0
+                };
+            }
+
+            cfg.imageSize = imageSize || null;
+            cfg.maxImageWidth = SHOT_IMAGE_MAX_WIDTH;
+            cfg.maxImageHeight = SHOT_IMAGE_MAX_HEIGHT;
+        }
+
         return cfg;
     })
     // process out config
@@ -118,23 +129,27 @@ module.exports = cfg => {
             return cfg;
         }
 
-        const rJpeg = /\.?jpe?g$/i;
-
-        let imgExt = '.png';
-        if(rJpeg.test(cfg.imageType || cfg.imageExtname)) {
-            imgExt = '.jpg';
-        }
-
         // out config
-        const outName = cfg.name || 'out';
-        const outPath = getCurrOutPath(cfg.id);
+        const { id, action, imageType, imageExtname } = cfg;
+        const outPath = getCurrOutPath(id);
+        const outName = 'out';
 
         cfg.out = {
             path: outPath,
-            imageType: imgExt === '.png' ? 'png' : 'jpeg',
-            image: path.join(outPath, outName + imgExt),
             metadata: {}
         };
+
+        if(action === 'shotpdf') {
+            cfg.out.pdf = path.join(outPath, outName + '.pdf');
+        }
+        else {
+            const rJpeg = /\.?jpe?g$/i;
+            const cfgImageType = imageType || imageExtname;
+            const imgExt = rJpeg.test(cfgImageType) ? '.jpg' : '.png';
+
+            cfg.out.imageType = imgExt === '.png' ? 'png' : 'jpeg';
+            cfg.out.image = path.join(outPath, outName + imgExt);
+        }
 
         return cfg;
     })
