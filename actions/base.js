@@ -83,6 +83,8 @@ class BaseAction extends EventEmitter {
             return;
         }
 
+        this.log('page.setRequestInterception');
+
         page.on('request', req => {
             return requestInterceptor.interceptRequest(req);
         });
