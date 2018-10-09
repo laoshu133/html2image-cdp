@@ -81,9 +81,8 @@ class ShotAction extends BaseAction {
             })
             // Clac image size
             .then(rect => {
-                let imageHeight = +imageSize.height || 0;
-                let imageWidth = +imageSize.width || 0;
-                let scaleFactor = 1;
+                let imageWidth = parseInt(imageSize.width, 10) || 0;
+                let imageHeight = parseInt(imageSize.height, 10) || 0;
 
                 if(imageWidth || imageHeight) {
                     const aspect = rect.width / rect.height;
@@ -94,8 +93,6 @@ class ShotAction extends BaseAction {
                     else if(!imageHeight) {
                         imageHeight = Math.round(imageWidth / aspect);
                     }
-
-                    scaleFactor = Math.max(imageWidth / rect.width, imageHeight / rect.height);
                 }
                 else {
                     imageHeight = rect.height;
@@ -116,44 +113,12 @@ class ShotAction extends BaseAction {
                 // Assign image size
                 image.width = imageWidth;
                 image.height = imageHeight;
-
-                if(scaleFactor !== 1) {
-                    this.log(`page.resetScaleFactor-${idx}`, {
-                        scaleFactor
-                    });
-
-                    image.lastViewport = page.viewport();
-                    image.resetScaleFactor = true;
-
-                    return page.setViewport({
-                        height: Math.max(cfg.viewport[1], rect.height),
-                        width: Math.max(cfg.viewport[0], rect.width),
-                        deviceScaleFactor: scaleFactor
-                    });
-                }
             })
+            // export png for image optimize
             .then(() => {
-                // const screenshotOptions = {
-                //     omitBackground: imageType === 'png',
-                //     type: imageType
-                // };
-
-                // if(screenshotOptions.type === 'jpeg' && cfg.imageQuality) {
-                //     screenshotOptions.quality = cfg.imageQuality;
-                // }
-
-                // return image.elem.screenshot(screenshotOptions);
-
-                // png for image optimize
                 return image.elem.screenshot({
                     type: 'png'
                 });
-            })
-            // Reset viewport
-            .tap(() => {
-                if(image.lastViewport) {
-                    return page.setViewport(image.lastViewport);
-                }
             })
             .then(buf => {
                 buf.type = 'image/png';
@@ -178,18 +143,20 @@ class ShotAction extends BaseAction {
 
         for(let idx = 0, len = images.length; idx < len; idx++) {
             const image = images[idx];
-            const rect = image.crop;
+            const { crop: rect, width: imageWidth, height: imageHeight } = image;
 
             this.log(`client.optimizeImage-${idx}`, {
                 imageQuality: cfg.imageQuality,
                 imageSize: cfg.imageSize,
+                imageHeight,
+                imageWidth,
                 cropPosition
             });
 
             let sharpImg = sharp(image.buffer);
 
-            if(image.width !== rect.width || image.height !== rect.height) {
-                sharpImg = sharpImg.resize(image.width, image.height, {
+            if(imageWidth !== rect.width || imageHeight !== rect.height) {
+                sharpImg = sharpImg.resize(imageWidth, imageHeight, {
                     position: cropPosition
                 });
             }
