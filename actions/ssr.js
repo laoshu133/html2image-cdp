@@ -5,7 +5,8 @@
 const BaseAction = require('./base');
 
 class SSR extends BaseAction {
-    async main(page) {
+    async main() {
+        const page = this.page;
         const html = await page.content();
 
         this.result = {

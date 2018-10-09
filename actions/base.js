@@ -23,6 +23,7 @@ class BaseAction extends EventEmitter {
         }, options || {});
 
         this.logger = this.options.logger.extend({
+            // action: cfg.action,
             shot_id: cfg.id,
             shot_url: cfg.url,
             selector: cfg.wrapSelector
@@ -34,8 +35,7 @@ class BaseAction extends EventEmitter {
     }
 
     log(type = '', metadata = null) {
-        const cfg = this.config;
-        const msg = `${capitalize(cfg.action)}.${type}`;
+        const msg = `Shot.${type}`;
 
         this.logger.info(msg, metadata);
     }
@@ -49,6 +49,8 @@ class BaseAction extends EventEmitter {
         // Assign page
         this.page = page;
 
+        // interceptions
+        await this.setErrorInterception();
         await this.setRequestInterception();
 
         this.log('page.open', {
@@ -76,6 +78,15 @@ class BaseAction extends EventEmitter {
         });
 
         return page;
+    }
+
+    async setErrorInterception() {
+        const page = this.page;
+        const pageErrors = page.pageErrors = [];
+
+        page.on('pageerror', err => {
+            pageErrors.push(err);
+        });
     }
 
     async setRequestInterception() {
@@ -170,7 +181,7 @@ class BaseAction extends EventEmitter {
         if(page) {
             this.page = null;
 
-            this.log('release');
+            this.log('client.release');
 
             const browser = await page.browser();
 
@@ -180,10 +191,27 @@ class BaseAction extends EventEmitter {
     }
 
     async run() {
-        const page = await this.ready();
+        try {
+            await this.ready();
 
-        await this.main(page);
+            await this.main();
+        }
+        catch(err) {
+            const pageErrors = this.page.pageErrors.map(err => {
+                return err.statck || err.message;
+            });
 
+            this.log('page.error', {
+                pageErrors: pageErrors.join('\n\n')
+            });
+
+            // Release client asap
+            await this.release();
+
+            throw err;
+        }
+
+        // Ensure release client
         await this.release();
     }
 }

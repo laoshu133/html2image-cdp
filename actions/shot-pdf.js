@@ -7,7 +7,8 @@ const fsp = require('fs-extra');
 const ShotAction = require('./shot');
 
 class ShotPdf extends ShotAction {
-    async main(page) {
+    async main() {
+        const page = this.page;
         const cfg = this.config;
         const result = {
             pdf: null
@@ -22,6 +23,9 @@ class ShotPdf extends ShotAction {
         this.log(`page.pdf.done`, {
             pdfBufferLength: result.pdf.length
         });
+
+        // Release client asap
+        await this.release();
 
         // Save pdf, skip if dataType is pdf
         if(cfg.dataType !== 'pdf') {

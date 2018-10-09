@@ -25,7 +25,8 @@ const shotCounts = {
 };
 
 class ShotAction extends BaseAction {
-    async _main(page) {
+    async _main() {
+        const page = this.page;
         const cfg = this.config;
         const dataType = cfg.dataType;
         const imageType = cfg.out.imageType;
@@ -225,10 +226,10 @@ class ShotAction extends BaseAction {
         };
     }
 
-    async main(page) {
+    async main() {
         shotCounts.total += 1;
 
-        await this._main(page)
+        await this._main()
         .then(() => {
             shotCounts.success += 1;
 
