@@ -6,6 +6,7 @@ const EventEmitter = require('events');
 
 const logger = require('../services/logger');
 const bridge = require('../services/bridge');
+const requestInterceptor = require('../services/request-interceptor');
 
 class BaseAction extends EventEmitter {
     constructor(cfg = {}, options = {}) {
@@ -15,6 +16,7 @@ class BaseAction extends EventEmitter {
 
         this.config = cfg;
         this.options = Object.assign({
+            requestInterceptor,
             bridge,
             logger
         }, options || {});
@@ -42,7 +44,10 @@ class BaseAction extends EventEmitter {
         const cfg = this.config;
         const page = await this.bridge.createPage();
 
+        // Assign page
         this.page = page;
+
+        await this.setRequestInterception();
 
         this.log('page.open', {
             hasContent: !!cfg.content,
@@ -69,6 +74,21 @@ class BaseAction extends EventEmitter {
         });
 
         return page;
+    }
+
+    async setRequestInterception() {
+        const page = this.page;
+
+        if(!page || !requestInterceptor.hasInterception()) {
+            return;
+        }
+
+        page.on('request', req => {
+            return requestInterceptor.interceptRequest(req);
+        });
+
+        // RequestInterception
+        await page.setRequestInterception(true);
     }
 
     async check() {
