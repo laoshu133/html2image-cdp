@@ -40,6 +40,36 @@ class BaseAction extends EventEmitter {
         this.logger.info(msg, metadata);
     }
 
+    async setErrorInterception() {
+        const page = this.page;
+        const pageErrors = page.pageErrors = [];
+
+        page.on('requestfailed', req => {
+            pageErrors.push(new Error(`Resource request failed: ${req.url()}`));
+        });
+
+        page.on('pageerror', err => {
+            pageErrors.push(err);
+        });
+    }
+
+    async setRequestInterception() {
+        const page = this.page;
+
+        if(!page || !requestInterceptor.hasInterception()) {
+            return;
+        }
+
+        this.log('page.setRequestInterception');
+
+        page.on('request', req => {
+            return requestInterceptor.interceptRequest(req);
+        });
+
+        // RequestInterception
+        await page.setRequestInterception(true);
+    }
+
     async load() {
         this.log('start');
 
@@ -72,38 +102,9 @@ class BaseAction extends EventEmitter {
             await page.setContent(cfg.htmlContent);
         }
 
-        this.log('page.load', {
-            hasContent: !!cfg.content,
-            viewport: cfg.viewport
-        });
+        this.log('page.open.done');
 
         return page;
-    }
-
-    async setErrorInterception() {
-        const page = this.page;
-        const pageErrors = page.pageErrors = [];
-
-        page.on('pageerror', err => {
-            pageErrors.push(err);
-        });
-    }
-
-    async setRequestInterception() {
-        const page = this.page;
-
-        if(!page || !requestInterceptor.hasInterception()) {
-            return;
-        }
-
-        this.log('page.setRequestInterception');
-
-        page.on('request', req => {
-            return requestInterceptor.interceptRequest(req);
-        });
-
-        // RequestInterception
-        await page.setRequestInterception(true);
     }
 
     async check() {
@@ -201,8 +202,9 @@ class BaseAction extends EventEmitter {
                 return err.statck || err.message;
             });
 
-            this.log('page.error', {
-                pageErrors: pageErrors.join('\n\n')
+            this.log(`error: ${err.message}`, {
+                pageErrors: pageErrors.join('\n\n'),
+                stack: err.stack
             });
 
             // Release client asap

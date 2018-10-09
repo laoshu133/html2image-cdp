@@ -226,42 +226,41 @@ class ShotAction extends BaseAction {
         };
     }
 
-    async main() {
-        shotCounts.total += 1;
+    // Check and clean
+    async checkAndCleanShots() {
+        if(!shotCheckInterval || shotCounts.total % shotCheckInterval > 0) {
+            return;
+        }
 
-        await this._main()
-        .then(() => {
+        try{
+            const removedIds = await clearTimeoutShots();
+
+            this.log('clearTimeoutShots', {
+                removedIds
+            });
+        }
+        catch(err) {
+            this.log('clearTimeoutShots.error', {
+                stack: err.stack || err.message
+            });
+        }
+    }
+
+    async main() {
+        try{
+            shotCounts.total += 1;
+
+            await this._main();
+
             shotCounts.success += 1;
 
-            // Check clean
-            if(!shotCheckInterval || shotCounts.total % shotCheckInterval > 0) {
-                return;
-            }
-
-            return clearTimeoutShots()
-            .then(removedIds => {
-                this.log('clearTimeoutShots', {
-                    removedIds
-                });
-            })
-            .catch(err => {
-                this.log('clearTimeoutShots.error', {
-                    stack: err.stack || err.message
-                });
-            });
-        })
-        .catch(err => {
+            await this.checkAndCleanShots();
+        }
+        catch(err) {
             shotCounts.error += 1;
 
-            // Ensure release client
-            this.release();
-
-            this.log('error: ' + err.message, {
-                stack: err.stack
-            });
-
             throw err;
-        });
+        }
     }
 }
 
