@@ -9,7 +9,7 @@ const Promise = require('bluebird');
 
 const uuid = require('../lib/uuid');
 const fill = require('../lib/fill');
-const prettyDate = require('./pretty-date');
+const prettyDate = require('../lib/pretty-date');
 const env = process.env;
 
 const SHOT_HTML_TPL_PATH = path.resolve(__dirname, '..', env.SHOT_HTML_TPL_PATH);

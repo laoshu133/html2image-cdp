@@ -5,7 +5,7 @@
 
 const os = require('os');
 const bridge = require('../services/bridge');
-const prettyDate = require('../services/pretty-date');
+const prettyDate = require('../lib/pretty-date');
 
 const Shot = require('../actions/shot');
 
