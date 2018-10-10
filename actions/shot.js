@@ -145,6 +145,21 @@ class ShotAction extends BaseAction {
         for(let idx = 0, len = images.length; idx < len; idx++) {
             const image = images[idx];
             const { crop: rect, width: imageWidth, height: imageHeight } = image;
+            const needsResize = imageWidth !== rect.width || imageHeight !== rect.height;
+
+            // Skip image optimiztion if not need resize
+            // @see: ibvips' PNG output supporting a minimum of 8 bits per pixel.
+            // https://github.com/lovell/sharp/issues/478
+            if(imageType === 'png' && !needsResize) {
+                this.log(`client.optimizeImage.skip-${idx}`, {
+                    imageQuality: cfg.imageQuality,
+                    imageSize: cfg.imageSize,
+                    imageHeight,
+                    imageWidth
+                });
+
+                continue;
+            }
 
             this.log(`client.optimizeImage-${idx}`, {
                 imageQuality: cfg.imageQuality,
@@ -163,12 +178,13 @@ class ShotAction extends BaseAction {
             }
 
             if(imageType === 'png') {
-                const level = Math.floor(10 - imageQuality / 10);
+                const minLevel = 4;
+                const reqLevel = Math.floor(10 - imageQuality / 10);
+                const level = Math.max(minLevel, reqLevel);
 
                 sharpImg = sharpImg.png({
-                    // Shim compression level
-                    compressionLevel: Math.max(4, level),
-                    adaptiveFiltering: false,
+                    compressionLevel: level,
+                    adaptiveFiltering: true,
                     progressive: false,
                     force: true
                 });
