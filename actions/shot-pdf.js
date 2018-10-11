@@ -3,6 +3,7 @@
  */
 
 const fsp = require('fs-extra');
+const Promise = require('bluebird');
 
 // const pxToMM = require('../lib/px-to-mm');
 const ShotAction = require('./shot');
@@ -40,7 +41,10 @@ class ShotPdf extends ShotAction {
             });
         }
 
-        result.pdf = await page.pdf(pdfOptions);
+        result.pdf = await Promise.try(() => {
+            return page.pdf(pdfOptions);
+        })
+        .timeout(cfg.screenshotTimeout, 'Take pdf timeout');
 
         this.log(`page.pdf.done`, {
             pdfBufferLength: result.pdf.length

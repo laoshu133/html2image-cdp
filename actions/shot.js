@@ -117,10 +117,13 @@ class ShotAction extends BaseAction {
             })
             // export png for image optimize
             .then(() => {
-                return image.elem.screenshot({
-                    omitBackground: imageType === 'png',
-                    type: 'png'
-                });
+                return Promise.try(() => {
+                    return image.elem.screenshot({
+                        omitBackground: imageType === 'png',
+                        type: 'png'
+                    });
+                })
+                .timeout(cfg.screenshotTimeout, 'Take image timeout');
             })
             .then(buf => {
                 buf.type = 'image/png';

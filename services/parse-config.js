@@ -13,6 +13,8 @@ const prettyDate = require('../lib/pretty-date');
 const env = process.env;
 
 const SHOT_HTML_TPL_PATH = path.resolve(__dirname, '..', env.SHOT_HTML_TPL_PATH);
+const SHOT_WAIT_MAX_TIMEOUT = +env.SHOT_WAIT_MAX_TIMEOUT || 60000;
+const SHOT_TAKE_MAX_TIMEOUT = +env.SHOT_TAKE_MAX_TIMEOUT || 60000;
 const SHOT_IMAGE_MAX_HEIGHT = +env.SHOT_IMAGE_MAX_HEIGHT || 8000;
 const SHOT_IMAGE_MAX_WIDTH = +env.SHOT_IMAGE_MAX_WIDTH || 8000;
 
@@ -72,6 +74,17 @@ module.exports = cfg => {
             ].join('_');
         }
 
+        // wrapFindTimeout
+        cfg.wrapFindTimeout = +cfg.wrapFindTimeout || 10000;
+        cfg.wrapFindTimeout = Math.min(cfg.wrapFindTimeout, SHOT_WAIT_MAX_TIMEOUT);
+
+        // shotTimeout
+        cfg.screenshotTimeout = +cfg.screenshotTimeout || 10000;
+        cfg.screenshotTimeout = Math.min(cfg.screenshotTimeout, SHOT_TAKE_MAX_TIMEOUT);
+
+        // wrapMaxCount
+        cfg.wrapMaxCount = cfg.wrapMaxCount > 0 ? +cfg.wrapMaxCount : 999;
+
         // Fix viewport
         let viewport = cfg.viewport || [];
         if(typeof viewport === 'string') {
@@ -81,11 +94,6 @@ module.exports = cfg => {
             +viewport[0] || 800,
             +viewport[1] || 600
         ];
-
-        // wrapMaxCount
-        cfg.wrapMaxCount = cfg.wrapMaxCount > 0
-            ? +cfg.wrapMaxCount
-            : 999;
 
         // Limit output type
         if(cfg.dataType === 'image') {
