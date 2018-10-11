@@ -2,36 +2,6 @@
 
 A screenshot service, base on Chromeheadless and Puppeteer.
 
-## 安装与启动
-
-1. 安装依赖
-
-    ```
-    npm i
-    ```
-
-2. 基础配置
-
-    复制基本配置
-
-    ```
-    cp .env.example .env
-    ```
-
-    配置服务器域名，将文件内 `WWW_HOST` 改为自己的域名或 IP
-
-    ```
-    vim .env
-
-    ```
-
-3. 启动
-
-    ```
-    npm start
-    ```
-
-
 ## 使用非常简单
 
 比如对某个网站截图
@@ -142,6 +112,34 @@ curl -H "Content-type: application/json" -X POST -d '{"url":"http://meiyaapp.com
 }
 ```
 
+## 安装与启动
+
+1. 安装依赖
+
+    ```
+    npm i
+    ```
+
+2. 基础配置
+
+    复制基本配置
+
+    ```
+    cp .env.example .env
+    ```
+
+    配置服务器域名，将文件内 `WWW_HOST` 改为自己的域名或 IP
+
+    ```
+    vim .env
+
+    ```
+
+3. 启动
+
+    ```
+    npm start
+    ```
 
 ## 贡献代码
 
