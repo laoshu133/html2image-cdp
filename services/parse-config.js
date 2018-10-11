@@ -34,7 +34,7 @@ const getLocalConfigPromise = Promise.try(() => {
 // Switch dir per 10 mins
 const getCurrOutPath = (id = 'tmp') => {
     const now = Date.now();
-    const interval = 10 * 60 * 1000;
+    const interval = 30 * 60 * 1000;
     const prefixDir = String(Math.floor(now / interval));
 
     let outPath = process.env.OUT_PATH;
@@ -95,6 +95,7 @@ module.exports = cfg => {
         // Pdf limit
         if(cfg.action === 'shotpdf') {
             const pdfOptions = Object.assign({
+                preferCSSPageSize: false,
                 printBackground: true
             }, cfg.pdfOptions || {});
 
