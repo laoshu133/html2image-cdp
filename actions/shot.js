@@ -118,6 +118,7 @@ class ShotAction extends BaseAction {
             // export png for image optimize
             .then(() => {
                 return image.elem.screenshot({
+                    omitBackground: imageType === 'png',
                     type: 'png'
                 });
             })
