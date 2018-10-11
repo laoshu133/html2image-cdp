@@ -4,6 +4,7 @@
 
 const fsp = require('fs-extra');
 
+// const pxToMM = require('../lib/px-to-mm');
 const ShotAction = require('./shot');
 
 class ShotPdf extends ShotAction {
@@ -23,11 +24,15 @@ class ShotPdf extends ShotAction {
             const elem = await page.$(cfg.wrapSelector);
             const rect = await elem.boundingBox();
 
-            pdfOptions.height = Math.round(rect.height);
-            pdfOptions.width = Math.round(rect.width);
+            const width = rect.width;
+            const height = rect.height;
+
+            // pdfOptions.width = `${pxToMM(width)}mm`;
+            // pdfOptions.height = `${pxToMM(height) + 0.05}mm`;
 
             // @TODO: 未知原因，需要增加偏移，否则会多出一页
-            pdfOptions.height += 1;
+            pdfOptions.height = Math.round(height) + 1;
+            pdfOptions.width = Math.round(width);
 
             this.log('page.pdf.getPageSize.done', {
                 height: pdfOptions.height,
