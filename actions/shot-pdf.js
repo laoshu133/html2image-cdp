@@ -10,6 +10,7 @@ class ShotPdf extends ShotAction {
     async main() {
         const page = this.page;
         const cfg = this.config;
+        const pdfOptions = cfg.pdfOptions;
         const result = {
             pdf: null
         };
@@ -18,7 +19,23 @@ class ShotPdf extends ShotAction {
             pdfOptions: cfg.pdfOptions
         });
 
-        result.pdf = await page.pdf(cfg.pdfOptions);
+        if(!pdfOptions.width && !pdfOptions.height) {
+            const elem = await page.$(cfg.wrapSelector);
+            const rect = await elem.boundingBox();
+
+            pdfOptions.height = Math.round(rect.height);
+            pdfOptions.width = Math.round(rect.width);
+
+            // @TODO: 未知原因，需要增加偏移，否则会多出一页
+            pdfOptions.height += 1;
+
+            this.log('page.pdf.getPageSize.done', {
+                height: pdfOptions.height,
+                width: pdfOptions.width
+            });
+        }
+
+        result.pdf = await page.pdf(pdfOptions);
 
         this.log(`page.pdf.done`, {
             pdfBufferLength: result.pdf.length
