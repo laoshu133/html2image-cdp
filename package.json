@@ -1,6 +1,6 @@
 {
   "name": "html2image-cdp",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A screenshot server base on Chrome Debugging Protocol interface.",
   "main": "index.js",
   "scripts": {
@@ -21,6 +21,7 @@
   "author": "xiaomi",
   "license": "MIT",
   "dependencies": {
+    "axios": "^0.18.0",
     "bluebird": "^3.5.2",
     "debug": "^4.0.1",
     "dotenv-safe": "^6.0.0",

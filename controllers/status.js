@@ -17,7 +17,7 @@ module.exports = router => {
     const serverStartTime = Date.now();
 
     router.get('/status', async (ctx) => {
-        // const query = this.query;
+        const pressure = await bridge.getPressure();
         const clientVersion = await bridge.getClientVersion();
 
         // 多进程运行时部分数据非实时
@@ -30,7 +30,8 @@ module.exports = router => {
             startTime: serverStartTime,
             startTimePretty: prettyMs(serverStartTime),
             shotCounts: Shot.shotCounts,
-            clientVersion: clientVersion
+            clientVersion,
+            pressure
         };
 
         ctx.body = data;
