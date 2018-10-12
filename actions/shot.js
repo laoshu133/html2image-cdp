@@ -57,7 +57,9 @@ class ShotAction extends BaseAction {
                 buffer: null,
                 height: 0,
                 width: 0,
-                elem
+                elem,
+                crop: null,
+                shotRect: null
             };
         })
         // Get crop rect and image size
@@ -129,18 +131,19 @@ class ShotAction extends BaseAction {
                 throw new Error(msg);
             }
 
-            if(viewWidth > viewport[0] || viewHeight > viewport[1]) {
-                const pageViewport = Object.assign({}, page.viewport(), {
-                    height: viewHeight,
-                    width: viewWidth
-                });
+            // Skip reset viewport by bridge.screenshotElement
+            // if(viewWidth > viewport[0] || viewHeight > viewport[1]) {
+            //     const pageViewport = Object.assign({}, page.viewport(), {
+            //         height: viewHeight,
+            //         width: viewWidth
+            //     });
 
-                this.log('page.resetViewport', {
-                    viewport: pageViewport
-                });
+            //     this.log('page.resetViewport', {
+            //         viewport: pageViewport
+            //     });
 
-                return page.setViewport(pageViewport);
-            }
+            //     return page.setViewport(pageViewport);
+            // }
         })
         // Disable background if need
         .tap(() => {
@@ -158,14 +161,17 @@ class ShotAction extends BaseAction {
                 });
             })
             .timeout(cfg.screenshotTimeout, 'Take image timeout')
-            .then(buf => {
-                buf.type = 'image/png';
+            .then(({ buffer, shotRect }) => {
+                buffer.type = 'image/png';
 
-                image.buffer = buf;
+                // Assign shotRect and buffer
+                image.shotRect = shotRect;
+                image.buffer = buffer;
 
                 this.log('page.captureScreenshot.done-' + idx, {
-                    bufferLength: buf.length,
-                    bufferType: buf.type
+                    bufferLength: buffer.length,
+                    bufferType: buffer.type,
+                    shotRect
                 });
 
                 return image;
@@ -181,13 +187,14 @@ class ShotAction extends BaseAction {
 
         for(let idx = 0, len = images.length; idx < len; idx++) {
             const image = images[idx];
-            const { crop: rect, width: imageWidth, height: imageHeight } = image;
+            const { shotRect, crop: rect, width: imageWidth, height: imageHeight } = image;
+            const needsExtract = imageWidth !== shotRect.width || imageHeight !== shotRect.height;
             const needsResize = imageWidth !== rect.width || imageHeight !== rect.height;
 
             // Skip image optimiztion if not need resize
             // @see: ibvips' PNG output supporting a minimum of 8 bits per pixel.
             // https://github.com/lovell/sharp/issues/478
-            if(imageType === 'png' && !needsResize) {
+            if(imageType === 'png' && !needsExtract && !needsResize) {
                 this.log(`client.optimizeImage.skip-${idx}`, {
                     imageQuality: cfg.imageQuality,
                     imageSize: cfg.imageSize,
@@ -208,7 +215,13 @@ class ShotAction extends BaseAction {
 
             let sharpImg = sharp(image.buffer);
 
-            if(imageWidth !== rect.width || imageHeight !== rect.height) {
+            // Extract image
+            if(needsExtract) {
+                sharpImg = sharpImg.extract(sharpImg)
+            }
+
+            // Resize image
+            if(needsResize) {
                 sharpImg = sharpImg.resize(imageWidth, imageHeight, {
                     position: cropPosition
                 });

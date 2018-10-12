@@ -55,13 +55,13 @@ class BaseAction extends EventEmitter {
 
         //     Promise.map(msg.args(), argv => {
         //         return argv.jsonValue().catch(err => {
-        //             return 'page.console.item.error: ' + err.message;
+        //             return 'page.log.item.error: ' + err.message;
         //         });
         //     })
         //     .then(args => {
-        //         console.log('\npage.console:');
+        //         console.log('\npage.log:');
         //         console.log(...args);
-        //         console.log('page.console.end\n');
+        //         console.log('page.log.end\n');
         //     });
         // });
     }
