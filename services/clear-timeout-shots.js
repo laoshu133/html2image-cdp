@@ -13,7 +13,7 @@ const getOutPath = require('./get-out-path');
 
 const cpuCount = require('os').cpus().length;
 
-const SHOT_CACHE_MAX_TIMEOUT = +process.env.SHOT_CACHE_MAX_TIMEOUT || 60000;
+const shotCacheTimeout = +process.env.SHOT_CACHE_MAX_TIMEOUT || 60 * 60 * 1000;
 const rShotDir = /^\d+/i;
 
 const getTimeoutShots = async () => {
@@ -40,7 +40,7 @@ const getTimeoutShots = async () => {
         .then(stats => {
             const elapsed = now - stats.mtime.getTime();
 
-            if(stats.isDirectory() && elapsed > SHOT_CACHE_MAX_TIMEOUT) {
+            if(stats.isDirectory() && elapsed > shotCacheTimeout) {
                 return true;
             }
 
