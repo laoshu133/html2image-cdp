@@ -28,6 +28,7 @@ const shotCounts = {
 class ShotAction extends BaseAction {
     async _main() {
         const page = this.page;
+        const bridge = this.bridge;
         const cfg = this.config;
         const dataType = cfg.dataType;
         const imageType = cfg.out.imageType;
@@ -141,60 +142,19 @@ class ShotAction extends BaseAction {
                 return page.setViewport(pageViewport);
             }
         })
+        // Disable background if need
+        .tap(() => {
+            if(imageType === 'png') {
+                return bridge.disableBackground(page);
+            }
+        })
         // Export image
         .mapSeries((image, idx) => {
-            this.log(`page.focusElement-${idx}`);
+            this.log('page.captureScreenshot-' + idx);
 
             return Promise.try(() => {
-                return page.evaluate((elem) => {
-                    elem.scrollIntoView({
-                        behavior: 'instant',
-                        inline: 'nearest',
-                        block: 'start'
-                    });
-
-                    const rect = elem.getBoundingClientRect();
-
-                    return {
-                        width: rect.width,
-                        height: rect.height,
-                        left: rect.left,
-                        top: rect.top
-                    };
-                }, image.elem)
-                .then(rect => {
-                    return page._client.send('Page.getLayoutMetrics')
-                    .then(res => {
-                        console.log(111, res);
-
-                        const layoutViewport = res.layoutViewport;
-                        const { pageX, pageY } = layoutViewport;
-
-                        rect.left += pageX;
-                        rect.top += pageY;
-
-                        return rect;
-                    });
-                })
-                .then(rect => {
-                    const crop = image.crop;
-                    const options = {
-                        omitBackground: imageType === 'png',
-                        type: 'png',
-                        clip: {
-                            width: crop.width,
-                            height: crop.height,
-                            x: Math.floor(rect.left),
-                            y: Math.floor(rect.top)
-                        }
-                    };
-
-                    this.log(`page.captureScreenshot-${idx}`, {
-                        screenshotOptions: JSON.stringify(options),
-                        rect
-                    });
-
-                    return page.screenshot(options);
+                return bridge.screenshotElement(image.elem, {
+                    type: 'png'
                 });
             })
             .timeout(cfg.screenshotTimeout, 'Take image timeout')
