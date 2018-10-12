@@ -10,6 +10,7 @@ const Promise = require('bluebird');
 const BaseAction = require('./base');
 const clearTimeoutShots = require('../services/clear-timeout-shots');
 
+const cpuCount = require('os').cpus().length;
 const shotCheckInterval = +process.env.SHOT_CACHE_CHECK_INTERVAL || 100;
 
 const oldCropTypesMap = {
@@ -220,15 +221,16 @@ class ShotAction extends BaseAction {
 
         // Save images, skip if dataType is image
         if(dataType !== 'image') {
-            for(let idx = 0, len = images.length; idx < len; idx++) {
-                const image = images[idx];
-
+            await Promise.map(images, (image, idx) => {
                 this.log(`client.saveImage-${idx}`);
 
-                await fsp.outputFile(image.path, image.buffer);
-
-                this.log(`client.saveImage.done-${idx}`);
-            }
+                return fsp.outputFile(image.path, image.buffer)
+                .then(() => {
+                    this.log(`client.saveImage.done-${idx}`);
+                });
+            }, {
+                concurrency: cpuCount
+            });
         }
 
         // Format result
