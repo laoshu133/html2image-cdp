@@ -188,8 +188,12 @@ class ShotAction extends BaseAction {
         for(let idx = 0, len = images.length; idx < len; idx++) {
             const image = images[idx];
             const { shotRect, crop: rect, width: imageWidth, height: imageHeight } = image;
-            const needsExtract = imageWidth !== shotRect.width || imageHeight !== shotRect.height;
             const needsResize = imageWidth !== rect.width || imageHeight !== rect.height;
+            const needsExtract =
+                imageHeight !== shotRect.height ||
+                imageWidth !== shotRect.width ||
+                shotRect.left > 0 ||
+                shotRect.top > 0;
 
             // Skip image optimiztion if not need resize
             // @see: ibvips' PNG output supporting a minimum of 8 bits per pixel.
@@ -210,14 +214,15 @@ class ShotAction extends BaseAction {
                 imageSize: cfg.imageSize,
                 imageHeight,
                 imageWidth,
-                cropPosition
+                cropPosition,
+                shotRect
             });
 
             let sharpImg = sharp(image.buffer);
 
             // Extract image
             if(needsExtract) {
-                sharpImg = sharpImg.extract(sharpImg)
+                sharpImg = sharpImg.extract(shotRect)
             }
 
             // Resize image
