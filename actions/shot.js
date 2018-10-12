@@ -52,8 +52,6 @@ class ShotAction extends BaseAction {
             const imagePath = path.join(out.path, `${outName}${ext}`);
 
             return {
-                resetViewport: false,
-                lastViewport: null,
                 path: imagePath,
                 buffer: null,
                 height: 0,
@@ -61,27 +59,11 @@ class ShotAction extends BaseAction {
                 elem
             };
         })
+        // Get crop rect and image size
         .mapSeries((image, idx) => {
-            this.log(`client.captureScreenshot-${idx}`);
+            this.log(`page.getCropRect-${idx}`);
 
-            return Promise.try(() => {
-                return image.elem.boundingBox();
-            })
-            .then(rect => {
-                rect = image.crop = {
-                    width: Math.floor(rect.width),
-                    height: Math.floor(rect.height),
-                    left: Math.round(rect.x),
-                    top: Math.round(rect.y)
-                };
-
-                this.log(`page.getClipRect-${idx}`, {
-                    crop: rect
-                });
-
-                return rect;
-            })
-            // Clac image size
+            return image.elem.boundingBox()
             .then(rect => {
                 let imageWidth = parseInt(imageSize.width, 10) || 0;
                 let imageHeight = parseInt(imageSize.height, 10) || 0;
@@ -101,37 +83,127 @@ class ShotAction extends BaseAction {
                     imageWidth = rect.width;
                 }
 
-                // Check image size limit
-                if(
-                    imageWidth > cfg.maxImageWidth ||
-                    imageHeight > cfg.maxImageHeight
-                ) {
-                    const maxSize = `${cfg.maxImageWidth}x${cfg.maxImageHeight}`;
-                    const msg = `Request Image size is out of limit: ${maxSize}`;
+                Object.assign(image, {
+                    width: imageWidth,
+                    height: imageHeight,
+                    crop: {
+                        width: Math.floor(rect.width),
+                        height: Math.floor(rect.height),
+                        left: Math.floor(rect.x),
+                        top: Math.floor(rect.y)
+                    }
+                });
 
-                    throw new Error(msg);
+                this.log(`page.getCropRect.done-${idx}`, {
+                    imageHeight: image.height,
+                    imageWidth: image.width,
+                    crop: image.crop,
+                    rect
+                });
+
+                return image;
+            });
+        })
+        // Calc viewport size and check image size limit
+        .tap(images => {
+            const viewport = cfg.viewport;
+
+            let viewWidth = viewport[0];
+            let viewHeight = viewport[1];
+
+            images.forEach(({ crop }) => {
+                if(crop.width >= viewWidth) {
+                    viewWidth = crop.width;
                 }
 
-                // Assign image size
-                image.width = imageWidth;
-                image.height = imageHeight;
-            })
-            // export png for image optimize
-            .then(() => {
-                return Promise.try(() => {
-                    return image.elem.screenshot({
-                        omitBackground: imageType === 'png',
-                        type: 'png'
+                if(crop.height >= viewHeight) {
+                    viewHeight = crop.height;
+                }
+            });
+
+            if(viewWidth > cfg.maxImageWidth || viewHeight > cfg.maxImageHeight) {
+                const maxSize = `${cfg.maxImageWidth}x${cfg.maxImageHeight}`;
+                const msg = `Request Image size is out of limit: ${maxSize}`;
+
+                throw new Error(msg);
+            }
+
+            if(viewWidth > viewport[0] || viewHeight > viewport[1]) {
+                const pageViewport = Object.assign({}, page.viewport(), {
+                    height: viewHeight,
+                    width: viewWidth
+                });
+
+                this.log('page.resetViewport', {
+                    viewport: pageViewport
+                });
+
+                return page.setViewport(pageViewport);
+            }
+        })
+        // Export image
+        .mapSeries((image, idx) => {
+            this.log(`page.focusElement-${idx}`);
+
+            return Promise.try(() => {
+                return page.evaluate((elem) => {
+                    elem.scrollIntoView({
+                        behavior: 'instant',
+                        inline: 'nearest',
+                        block: 'start'
+                    });
+
+                    const rect = elem.getBoundingClientRect();
+
+                    return {
+                        width: rect.width,
+                        height: rect.height,
+                        left: rect.left,
+                        top: rect.top
+                    };
+                }, image.elem)
+                .then(rect => {
+                    return page._client.send('Page.getLayoutMetrics')
+                    .then(res => {
+                        console.log(111, res);
+
+                        const layoutViewport = res.layoutViewport;
+                        const { pageX, pageY } = layoutViewport;
+
+                        rect.left += pageX;
+                        rect.top += pageY;
+
+                        return rect;
                     });
                 })
-                .timeout(cfg.screenshotTimeout, 'Take image timeout');
+                .then(rect => {
+                    const crop = image.crop;
+                    const options = {
+                        omitBackground: imageType === 'png',
+                        type: 'png',
+                        clip: {
+                            width: crop.width,
+                            height: crop.height,
+                            x: Math.floor(rect.left),
+                            y: Math.floor(rect.top)
+                        }
+                    };
+
+                    this.log(`page.captureScreenshot-${idx}`, {
+                        screenshotOptions: JSON.stringify(options),
+                        rect
+                    });
+
+                    return page.screenshot(options);
+                });
             })
+            .timeout(cfg.screenshotTimeout, 'Take image timeout')
             .then(buf => {
                 buf.type = 'image/png';
 
                 image.buffer = buf;
 
-                this.log('client.captureScreenshot.done-' + idx, {
+                this.log('page.captureScreenshot.done-' + idx, {
                     bufferLength: buf.length,
                     bufferType: buf.type
                 });
@@ -246,6 +318,8 @@ class ShotAction extends BaseAction {
                 })
             }
         };
+
+        this.log('client.formatResult');
     }
 
     // Check and clean

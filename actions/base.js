@@ -23,9 +23,7 @@ class BaseAction extends EventEmitter {
 
         this.logger = this.options.logger.extend({
             // action: cfg.action,
-            shot_id: cfg.id,
-            shot_url: cfg.url,
-            selector: cfg.wrapSelector
+            shot_id: cfg.id
         }, {
             logElapsed: true
         });
@@ -86,9 +84,13 @@ class BaseAction extends EventEmitter {
     }
 
     async load() {
-        this.log('start');
-
         const cfg = this.config;
+
+        this.log('start', {
+            wrapSelector: cfg.wrapSelector,
+            shot_url: cfg.url
+        });
+
         const page = await this.bridge.createPage();
 
         // Assign page
@@ -128,7 +130,8 @@ class BaseAction extends EventEmitter {
 
         this.log('page.check', {
             wrapFindTimeout: cfg.wrapFindTimeout,
-            errorSelector: cfg.errorSelector
+            errorSelector: cfg.errorSelector,
+            wrapSelector: cfg.wrapSelector
         });
 
         await page.waitForFunction(cfg => {
