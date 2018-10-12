@@ -36,7 +36,7 @@ const getLocalConfigPromise = Promise.try(() => {
 // Switch dir per 10 mins
 const getCurrOutPath = (id = 'tmp') => {
     const now = Date.now();
-    const interval = 30 * 60 * 1000;
+    const interval = 20 * 60 * 1000;
     const prefixDir = String(Math.floor(now / interval));
 
     let outPath = process.env.OUT_PATH;
