@@ -83,7 +83,8 @@ module.exports = cfg => {
         cfg.screenshotTimeout = Math.min(cfg.screenshotTimeout, SHOT_TAKE_MAX_TIMEOUT);
 
         // wrapMaxCount
-        cfg.wrapMaxCount = cfg.wrapMaxCount > 0 ? +cfg.wrapMaxCount : 999;
+        cfg.wrapMaxCount = +cfg.wrapMaxCount || 99;
+        cfg.wrapMaxCount = Math.min(cfg.wrapMaxCount, 99);
 
         // Fix viewport
         let viewport = cfg.viewport || [];
