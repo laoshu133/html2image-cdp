@@ -108,7 +108,7 @@ class BaseAction extends EventEmitter {
         await page.setDefaultNavigationTimeout(cfg.wrapFindTimeout);
 
         await page.goto(cfg.url, {
-            // waitUntil: 'load'
+            waitUntil: 'domcontentloaded'
         });
 
         if(cfg.htmlContent) {
