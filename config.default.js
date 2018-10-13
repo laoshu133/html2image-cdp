@@ -1,7 +1,7 @@
 module.exports = {
     url: null, // 待截图的 URL，如果指定 content 此参数无效
     content: '', // 如果指定 content ，将自动根据 htmlTpl 构建 HTML
-    contentTemplate: 'default', // content 渲染模板
+    contentTemplate: 'default', // content 渲染模板，支持 default, empty，默认 default
     dataType: 'json', // 返回的数据类型，支持 json 和 image
     action: 'shot', // 动作，目前支持 ssr, shot, shotpdf， 默认 shot
 
@@ -13,7 +13,7 @@ module.exports = {
 
     imageType: 'png', // 生成图片类似，支持 png, jpg
     imageQuality: 90, // 图片质量 1-100
-    imageSize: null, // 图片大小，裁剪策略 {width, height, strategy}
+    imageSize: null, // 图片大小，裁剪位置 {width, height, position}
 
     pdfOptions: null, // pdf 导出配置
 
