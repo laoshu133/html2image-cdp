@@ -144,10 +144,11 @@ class BaseAction extends EventEmitter {
 
             // Check page load status
             if(statusData.readyState !== 'complete') {
-                const msg = `Page load fialed: ${statusData.readyState}`;
-                const err = new Error(msg);
+                // const msg = `Page load fialed: ${statusData.readyState}`;
+                // const err = new Error(msg);
 
-                return Promise.reject(err);
+                // return Promise.reject(err);
+                return false;
             }
 
             // Check render error first
