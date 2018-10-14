@@ -173,7 +173,7 @@ class BaseAction extends EventEmitter {
             err.status = 400;
 
             if(err.message.includes('timeout')) {
-                err.message = `Elements not found by ${cfg.wrapSelector}`;
+                err.message = `Find elements timeout by ${cfg.wrapSelector}`;
 
                 err.status = 404;
             }

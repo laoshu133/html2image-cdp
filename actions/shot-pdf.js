@@ -44,7 +44,7 @@ class ShotPdf extends ShotAction {
         result.pdf = await Promise.try(() => {
             return page.pdf(pdfOptions);
         })
-        .timeout(cfg.screenshotTimeout, 'Take pdf timeout');
+        .timeout(cfg.screenshotTimeout, 'Capture pdf timeout');
 
         this.log(`page.pdf.done`, {
             pdfBufferLength: result.pdf.length

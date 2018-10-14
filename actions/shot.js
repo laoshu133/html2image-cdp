@@ -68,6 +68,13 @@ class ShotAction extends BaseAction {
 
             return image.elem.boundingBox()
             .then(rect => {
+                const crop = {
+                    width: Math.floor(rect.width),
+                    height: Math.floor(rect.height),
+                    left: Math.floor(rect.x),
+                    top: Math.floor(rect.y)
+                };
+
                 let imageWidth = parseInt(imageSize.width, 10) || 0;
                 let imageHeight = parseInt(imageSize.height, 10) || 0;
 
@@ -82,25 +89,20 @@ class ShotAction extends BaseAction {
                     }
                 }
                 else {
-                    imageHeight = rect.height;
-                    imageWidth = rect.width;
+                    imageHeight = crop.height;
+                    imageWidth = crop.width;
                 }
 
                 Object.assign(image, {
                     width: imageWidth,
                     height: imageHeight,
-                    crop: {
-                        width: Math.floor(rect.width),
-                        height: Math.floor(rect.height),
-                        left: Math.floor(rect.x),
-                        top: Math.floor(rect.y)
-                    }
+                    crop
                 });
 
                 this.log(`page.getCropRect.done-${idx}`, {
-                    imageHeight: image.height,
-                    imageWidth: image.width,
-                    crop: image.crop,
+                    imageHeight,
+                    imageWidth,
+                    crop,
                     rect
                 });
 
@@ -160,7 +162,7 @@ class ShotAction extends BaseAction {
                     type: 'png'
                 });
             })
-            .timeout(cfg.screenshotTimeout, 'Take image timeout')
+            .timeout(cfg.screenshotTimeout, 'Capture image timeout')
             .then(({ buffer, shotRect }) => {
                 buffer.type = 'image/png';
 
