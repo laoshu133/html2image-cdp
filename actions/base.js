@@ -85,12 +85,6 @@ class BaseAction extends EventEmitter {
 
     async load() {
         const cfg = this.config;
-
-        this.log('start', {
-            wrapSelector: cfg.wrapSelector,
-            shot_url: cfg.url
-        });
-
         const page = await this.bridge.createPage();
 
         // Assign page
@@ -209,10 +203,18 @@ class BaseAction extends EventEmitter {
     }
 
     async run() {
-        try {
-            await this.ready();
+        const cfg = this.config;
 
+        try {
+            this.log('start', {
+                wrapSelector: cfg.wrapSelector,
+                shot_url: cfg.url
+            });
+
+            await this.ready();
             await this.main();
+
+            this.log('done');
         }
         catch(err) {
             const pageErrors = (this.page && this.page.pageErrors) || [];

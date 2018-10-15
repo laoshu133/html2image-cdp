@@ -298,8 +298,6 @@ class ShotAction extends BaseAction {
                 })
             }
         };
-
-        this.log('client.formatResult');
     }
 
     // Check and clean
