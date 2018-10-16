@@ -25,7 +25,7 @@ module.exports = router => {
             hostname: os.hostname(),
             host: ctx.host,
             protocol: ctx.protocol,
-            // process_id: process.pid,
+            process_id: process.pid,
             uptime: Date.now() - serverStartTime,
             startTime: serverStartTime,
             startTimePretty: prettyMs(serverStartTime),
