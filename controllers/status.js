@@ -20,7 +20,7 @@ module.exports = router => {
         const pressure = await bridge.getPressure();
         const clientVersion = await bridge.getClientVersion();
 
-        // 多进程运行时部分数据非实时
+        // 多实例运行时部分数据非实时
         const data = {
             hostname: os.hostname(),
             host: ctx.host,
