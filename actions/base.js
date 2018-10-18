@@ -101,9 +101,7 @@ class BaseAction extends EventEmitter {
 
         await page.setDefaultNavigationTimeout(cfg.wrapFindTimeout);
 
-        await page.goto(cfg.url, {
-            waitUntil: 'domcontentloaded'
-        });
+        await bridge.goto(page, cfg.url);
 
         if(cfg.htmlContent) {
             this.log('page.updateDocumentContent', {
