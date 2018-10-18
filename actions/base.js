@@ -80,12 +80,17 @@ class BaseAction extends EventEmitter {
         // RequestInterception
         await page.setRequestInterception(true);
 
+        // Re-enable page caching
+        await page.setCacheEnabled(true);
+
         this.log('page.setRequestInterception.done');
     }
 
     async load() {
         const cfg = this.config;
         const page = await this.bridge.createPage();
+
+        this.log('page.created');
 
         // Assign page
         this.page = page;
