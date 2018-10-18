@@ -158,7 +158,11 @@ class ShotAction extends BaseAction {
             this.log('page.captureScreenshot-' + idx);
 
             return Promise.try(() => {
-                return bridge.screenshotElement(image.elem, {
+                const { elem, crop: rect } = image;
+
+                return bridge.screenshotElement(elem, {
+                    width: rect.width,
+                    height: rect.height,
                     type: 'png'
                 });
             })
