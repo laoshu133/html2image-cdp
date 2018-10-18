@@ -224,6 +224,7 @@ class BaseAction extends EventEmitter {
 
             this.log(`error: ${err.message}`, {
                 shot_url: cfg.url,
+                wrapSelector: cfg.wrapSelector,
                 pageErrors: pageErrorStacks.join('\n\n'),
                 stack: err.stack
             });
