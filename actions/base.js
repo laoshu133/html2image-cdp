@@ -160,7 +160,7 @@ class BaseAction extends EventEmitter {
             return statusData.wrapNodeCount >= cfg.wrapMinCount;
         }, {
             timeout: cfg.wrapFindTimeout,
-            polling: 64
+            polling: 16
         }, {
             errorSelector: cfg.errorSelector,
             wrapSelector: cfg.wrapSelector,
