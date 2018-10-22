@@ -159,16 +159,21 @@ class ShotAction extends BaseAction {
 
             return Promise.try(() => {
                 const { elem, crop: rect } = image;
-
-                return bridge.screenshotElement(elem, {
-                    width: rect.width,
+                const options = {
                     height: rect.height,
-                    type: 'png'
-                });
+                    width: rect.width,
+                    type: imageType
+                };
+
+                if(imageType === 'jpeg') {
+                    options.quality = cfg.imageQuality;
+                }
+
+                return bridge.screenshotElement(elem, options);
             })
             .timeout(cfg.screenshotTimeout, 'Capture image timeout')
             .then(({ buffer, shotRect }) => {
-                buffer.type = 'image/png';
+                buffer.type = `image/${imageType}`;
 
                 // Assign shotRect and buffer
                 image.shotRect = shotRect;
@@ -204,7 +209,7 @@ class ShotAction extends BaseAction {
             // Skip image optimiztion if not need resize
             // @see: ibvips' PNG output supporting a minimum of 8 bits per pixel.
             // https://github.com/lovell/sharp/issues/478
-            if(imageType === 'png' && !needsExtract && !needsResize) {
+            if(!needsExtract && !needsResize) {
                 this.log(`client.optimizeImage.skip-${idx}`, {
                     imageQuality: cfg.imageQuality,
                     imageSize: cfg.imageSize,
