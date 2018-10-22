@@ -148,18 +148,21 @@ class BaseAction extends EventEmitter {
                 };
             }, wrapConfig)
             .then(statusData => {
+                const err = new Error('Page check failed');
+
+                err.statusData = statusData;
+                err.status = 400;
+
                 // Check page load status
                 if(statusData.readyState !== 'complete') {
-                    const msg = `Page load fialed: ${statusData.readyState}`;
-                    const err = new Error(msg);
+                    err.message = `Page load failed: ${statusData.readyState}`;
 
                     throw err;
                 }
 
                 // Check render error first
                 if(statusData.errorNodeCount) {
-                    const msg = `Page render error by ${cfg.errorSelector}`;
-                    const err = new Error(msg);
+                    err.message = `Page render error by ${cfg.errorSelector}`;
 
                     // Force abort
                     abort(err);
@@ -172,8 +175,8 @@ class BaseAction extends EventEmitter {
                     !statusData.wrapNodeCount ||
                     statusData.wrapNodeCount < cfg.wrapMinCount
                 ) {
-                    const msg = `Less than ${cfg.wrapMinCount} elements`;
-                    const err = new Error(msg);
+                    err.message = `Find elements timeout by ${cfg.wrapSelector}`;
+                    err.status = 404;
 
                     throw err;
                 }
@@ -190,67 +193,6 @@ class BaseAction extends EventEmitter {
             const statusData = err.statusData || {};
 
             this.log(`page.check.failed: ${err.message}`, statusData);
-
-            throw err;
-        });
-
-        this.log('page.check.done');
-    }
-
-    async checkByWaitForFunction() {
-        const cfg = this.config;
-        const page = await this.load();
-        const wrapConfig = {
-            errorSelector: cfg.errorSelector,
-            wrapSelector: cfg.wrapSelector,
-            wrapMinCount: cfg.wrapMinCount
-        };
-
-        this.log('page.check', {
-            wrapFindTimeout: cfg.wrapFindTimeout,
-
-            ...wrapConfig
-        });
-
-        await page.waitForFunction(cfg => {
-            const $$ = document.querySelectorAll.bind(document);
-            const statusData = {
-                errorNodeCount: $$(cfg.errorSelector).length,
-                wrapNodeCount: $$(cfg.wrapSelector).length,
-                readyState: document.readyState
-            };
-
-            // Check page load status
-            if(statusData.readyState !== 'complete') {
-                // const msg = `Page load fialed: ${statusData.readyState}`;
-                // const err = new Error(msg);
-
-                // return Promise.reject(err);
-                return false;
-            }
-
-            // Check render error first
-            if(statusData.errorNodeCount) {
-                const msg = `Page render error by ${cfg.errorSelector}`;
-                const err = new Error(msg);
-
-                return Promise.reject(err);
-            }
-
-            // Check wrap node count
-            return statusData.wrapNodeCount >= cfg.wrapMinCount;
-        }, {
-            timeout: cfg.wrapFindTimeout,
-            polling: 16
-        }, wrapConfig)
-        .catch(err => {
-            err.status = 400;
-
-            if(err.message.includes('timeout')) {
-                err.message = `Find elements timeout by ${cfg.wrapSelector}`;
-
-                err.status = 404;
-            }
 
             throw err;
         });
