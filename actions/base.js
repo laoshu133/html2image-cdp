@@ -4,6 +4,7 @@
 
 const EventEmitter = require('events');
 
+const waitFor = require('../lib/wait-for');
 const logger = require('../services/logger');
 const bridge = require('../services/bridge');
 const requestInterceptor = require('../services/request-interceptor');
@@ -124,11 +125,91 @@ class BaseAction extends EventEmitter {
     async check() {
         const cfg = this.config;
         const page = await this.load();
+        const wrapConfig = {
+            errorSelector: cfg.errorSelector,
+            wrapSelector: cfg.wrapSelector,
+            wrapMinCount: cfg.wrapMinCount
+        };
 
         this.log('page.check', {
             wrapFindTimeout: cfg.wrapFindTimeout,
+
+            ...wrapConfig
+        });
+
+        await waitFor((resolve, reject, abort) => {
+            return page.evaluate(cfg => {
+                const $$ = document.querySelectorAll.bind(document);
+
+                return {
+                    errorNodeCount: $$(cfg.errorSelector).length,
+                    wrapNodeCount: $$(cfg.wrapSelector).length,
+                    readyState: document.readyState
+                };
+            }, wrapConfig)
+            .then(statusData => {
+                // Check page load status
+                if(statusData.readyState !== 'complete') {
+                    const msg = `Page load fialed: ${statusData.readyState}`;
+                    const err = new Error(msg);
+
+                    throw err;
+                }
+
+                // Check render error first
+                if(statusData.errorNodeCount) {
+                    const msg = `Page render error by ${cfg.errorSelector}`;
+                    const err = new Error(msg);
+
+                    // Force abort
+                    abort(err);
+
+                    throw err;
+                }
+
+                // Check wrap node count
+                if(
+                    !statusData.wrapNodeCount ||
+                    statusData.wrapNodeCount < cfg.wrapMinCount
+                ) {
+                    const msg = `Less than ${cfg.wrapMinCount} elements`;
+                    const err = new Error(msg);
+
+                    throw err;
+                }
+
+                return statusData;
+            })
+            .then(resolve)
+            .catch(reject);
+        }, {
+            timeout: cfg.wrapFindTimeout,
+            interval: 16
+        })
+        .catch(err => {
+            const statusData = err.statusData || {};
+
+            this.log(`page.check.failed: ${err.message}`, statusData);
+
+            throw err;
+        });
+
+        this.log('page.check.done');
+    }
+
+    async checkByWaitForFunction() {
+        const cfg = this.config;
+        const page = await this.load();
+        const wrapConfig = {
             errorSelector: cfg.errorSelector,
-            wrapSelector: cfg.wrapSelector
+            wrapSelector: cfg.wrapSelector,
+            wrapMinCount: cfg.wrapMinCount
+        };
+
+        this.log('page.check', {
+            wrapFindTimeout: cfg.wrapFindTimeout,
+
+            ...wrapConfig
         });
 
         await page.waitForFunction(cfg => {
@@ -161,11 +242,7 @@ class BaseAction extends EventEmitter {
         }, {
             timeout: cfg.wrapFindTimeout,
             polling: 16
-        }, {
-            errorSelector: cfg.errorSelector,
-            wrapSelector: cfg.wrapSelector,
-            wrapMinCount: cfg.wrapMinCount
-        })
+        }, wrapConfig)
         .catch(err => {
             err.status = 400;
 
@@ -179,8 +256,6 @@ class BaseAction extends EventEmitter {
         });
 
         this.log('page.check.done');
-
-        return page;
     }
 
     async ready() {
