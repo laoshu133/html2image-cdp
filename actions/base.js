@@ -217,7 +217,10 @@ class BaseAction extends EventEmitter {
             await this.ready();
             await this.main();
 
-            this.log('done');
+            this.log('done', {
+                wrapSelector: cfg.wrapSelector,
+                shot_url: cfg.url
+            });
         }
         catch(err) {
             const pageErrors = (this.page && this.page.pageErrors) || [];
@@ -228,6 +231,7 @@ class BaseAction extends EventEmitter {
             this.log(`error: ${err.message}`, {
                 shot_url: cfg.url,
                 wrapSelector: cfg.wrapSelector,
+                errorSelector: cfg.errorSelector,
                 pageErrors: pageErrorStacks.join('\n\n'),
                 stack: err.stack
             });
