@@ -264,7 +264,10 @@ class ShotAction extends BaseAction {
             }
 
             const lastBufferLenght = image.buffer.length;
-            const buf = await sharpImg.toBuffer();
+            const buf = await Promise.try(() => {
+                return sharpImg.toBuffer();
+            })
+            .timeout(2000, 'Optimize image timeout');
 
             buf.type = `image/${imageType}`;
 
