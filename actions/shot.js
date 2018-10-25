@@ -130,7 +130,7 @@ class ShotAction extends BaseAction {
                 const maxSize = `${cfg.maxImageWidth}x${cfg.maxImageHeight}`;
                 const msg = `Request Image size is out of limit: ${maxSize}`;
 
-                throw new Error(msg);
+                this.throwError(msg);
             }
 
             // Skip reset viewport by bridge.screenshotElement

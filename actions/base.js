@@ -38,6 +38,18 @@ class BaseAction extends EventEmitter {
         this.logger.info(msg, metadata);
     }
 
+    throwError(err, status = 400) {
+        if(!(err instanceof Error)) {
+            err = new Error(err);
+        }
+
+        if(!err.status) {
+            err.status = status || 400;
+        }
+
+        throw err;
+    }
+
     async setErrorInterception() {
         const page = this.page;
         const pageErrors = page.pageErrors = [];
@@ -89,6 +101,11 @@ class BaseAction extends EventEmitter {
 
     async load() {
         const cfg = this.config;
+
+        if(!cfg.url) {
+            this.throwError('url or content not provided');
+        }
+
         const page = await this.bridge.createPage();
 
         this.log('page.created');
@@ -176,7 +193,7 @@ class BaseAction extends EventEmitter {
                     statusData.wrapNodeCount < cfg.wrapMinCount
                 ) {
                     err.message = `Find elements timeout by ${cfg.wrapSelector}`;
-                    err.status = 404;
+                    err.status = 408;
 
                     throw err;
                 }
