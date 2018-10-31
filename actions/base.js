@@ -227,16 +227,26 @@ class BaseAction extends EventEmitter {
 
     async release() {
         const page = this.page;
-        if(page) {
-            this.page = null;
+        if(!this.page) {
+            return;
+        }
 
-            this.log('client.release');
+        this.page = null;
 
+        try{
             const browser = await page.browser();
 
-            await page.close();
+            // await page.close();
             await browser.disconnect();
         }
+        // Ignore release error
+        catch(err) {
+            this.log('client.release.error: ' + err.message, {
+                stack: err.stack
+            });
+        }
+
+        this.log('client.release');
     }
 
     async run() {
