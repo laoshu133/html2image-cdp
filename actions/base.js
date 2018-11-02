@@ -269,7 +269,7 @@ class BaseAction extends EventEmitter {
         catch(err) {
             const pageErrors = (this.page && this.page.pageErrors) || [];
             const pageErrorStacks = pageErrors.map(err => {
-                return err.statck || err.message;
+                return err.stack || err.message;
             });
 
             this.log(`error: ${err.message}`, {
