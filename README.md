@@ -25,7 +25,7 @@ curl http://shot.huanleguang.cn/?url=http://meiyaapp.com&wrapSelector=.floor
 自定义宽高以及裁剪方式
 
 ```
-curl -H "Content-type: application/json" -X POST -d '{"url":"http://meiyaapp.com","wrapSelector":"body","imageSize":{"position":"right top","width":1200,"height":800}' http://shot.huanleguang.cn
+curl -H "Content-type: application/json" -X POST -d '{"url":"http://meiyaapp.com","wrapSelector":"body","imageSize":{"position":"right top","width":1200,"height":800}}' http://shot.huanleguang.cn
 ```
 
 ## 完整配置参数
