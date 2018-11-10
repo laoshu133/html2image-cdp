@@ -106,9 +106,11 @@ class BaseAction extends EventEmitter {
             this.throwError('url or content not provided');
         }
 
+        this.log('page.request');
+
         const page = await this.bridge.createPage();
 
-        this.log('page.created');
+        this.log('page.request.done');
 
         // Assign page
         this.page = page;
