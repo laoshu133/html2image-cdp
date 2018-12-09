@@ -23,6 +23,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "bluebird": "^3.5.2",
+    "canvas": "^2.2.0",
     "debug": "^4.0.1",
     "dotenv-safe": "^6.0.0",
     "fs-extra": "^7.0.0",

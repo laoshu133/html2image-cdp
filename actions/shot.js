@@ -8,6 +8,7 @@ const fsp = require('fs-extra');
 const Promise = require('bluebird');
 
 const BaseAction = require('./base');
+const mergeImages = require('../lib/merge-images');
 const clearTimeoutShots = require('../services/clear-timeout-shots');
 
 const cpuCount = require('os').cpus().length;
@@ -157,21 +158,45 @@ class ShotAction extends BaseAction {
         .mapSeries((image, idx) => {
             this.log('page.captureScreenshot-' + idx);
 
-            return Promise.try(() => {
-                const { elem, crop: rect } = image;
-                const options = {
-                    height: rect.height,
-                    width: rect.width,
-                    type: imageType
-                };
+            const { elem, crop: rect } = image;
+            const options = {
+                quality: cfg.imageQuality,
+                height: rect.height,
+                width: rect.width,
+                type: imageType
+            };
 
-                if(imageType === 'jpeg') {
-                    options.quality = cfg.imageQuality;
+            return Promise.try(() => {
+                // 分片截图
+                if(
+                    rect.width > cfg.imageBigThreshold ||
+                    rect.height > cfg.imageBigThreshold
+                ) {
+                    options.chunkSize = cfg.imageChunkSize;
+
+                    return bridge.screenshotElementByChunks(elem, options);
                 }
 
                 return bridge.screenshotElement(elem, options);
             })
             .timeout(cfg.screenshotTimeout, 'Capture image timeout')
+            // Merge images if need
+            .then(ret => {
+                if(ret.chunks) {
+                    this.log('page.mergeImages-' + idx);
+
+                    return mergeImages(ret.chunks, rect, options)
+                    .then(buf => {
+                        this.log('page.mergeImages.done-' + idx);
+
+                        ret.buffer = buf;
+
+                        return ret;
+                    });
+                }
+
+                return ret;
+            })
             .then(({ buffer, shotRect }) => {
                 buffer.type = `image/${imageType}`;
 
