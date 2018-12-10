@@ -108,9 +108,15 @@ class BaseAction extends EventEmitter {
 
         this.log('page.request');
 
-        const page = await this.bridge.createPage();
+        const page = await this.bridge.createPage().catch(err => {
+            if(!(err instanceof Error)) {
+                err = new Error(err);
+            }
 
-        this.log('page.request.done');
+            err.message = `Page create error: ${err.message}`;
+
+            throw err;
+        });
 
         // Assign page
         this.page = page;
