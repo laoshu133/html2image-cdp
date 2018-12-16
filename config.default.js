@@ -12,7 +12,7 @@ module.exports = {
     wrapMaxCount: 0, // 要求截图区域最大数量
 
     screenshotTimeout: 20000, // 单次截图超时时间
-    imageBigThreshold: 4800, // 根据此阀值决定是否为大图
+    imageBigThreshold: 5200, // 根据此阀值决定是否为大图
     imageChunkSize: 4000, // 如果为大图分片截图时单片大小
     imageType: 'png', // 生成图片类似，支持 png, jpg
     imageQuality: 90, // 图片质量 1-100
