@@ -123,7 +123,12 @@ class BaseAction extends EventEmitter {
 
         // interceptions
         await this.setErrorInterception();
-        await this.setRequestInterception();
+
+        // TODO: fix dataURL RequestInterception
+        // 当页面 URL 为 dataURL 时开启请求拦截会导致请求失败
+        if(cfg.url.indexOf('data:') !== 0) {
+            await this.setRequestInterception();
+        }
 
         this.log('page.open', {
             hasContent: !!cfg.content,
