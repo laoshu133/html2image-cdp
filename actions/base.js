@@ -132,14 +132,17 @@ class BaseAction extends EventEmitter {
 
         await page.setDefaultNavigationTimeout(cfg.wrapFindTimeout);
 
-        await bridge.goto(page, cfg.url);
-
-        if(cfg.htmlContent) {
+        if(!cfg.htmlContent) {
+            await this.bridge.goto(page, cfg.url);
+        }
+        else {
             this.log('page.updateDocumentContent', {
                 contentTemplate: cfg.contentTemplate
             });
 
-            await page.setContent(cfg.htmlContent);
+            await page.setContent(cfg.htmlContent, {
+                waitUntil: 'load'
+            });
         }
 
         this.log('page.open.done');

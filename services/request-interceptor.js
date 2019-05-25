@@ -31,11 +31,13 @@ if(!isEmpty(hostsMap)) {
     const rHost = /^(\w+):\/\/([^/]+)/;
 
     defaultInterceptors.push(req => {
+        // Defualt return null to continue next interceptor
         let ret = null;
 
         const url = req.url();
         const newUrl = url.replace(rHost, (a, protocol, host) => {
             if(hostsMap.hasOwnProperty(host)) {
+                // Return false to break interceptor chain
                 ret = hostsMap[host] ? { url: '' } : false;
 
                 return `${protocol}://${hostsMap[host]}`;
@@ -71,7 +73,7 @@ const requestInterceptor = {
         }
 
         if(ret !== false) {
-            return ret ? req.continue(ret) : req.continue();
+            return req.continue(ret || {});
         }
 
         return req.abort('blockedbyclient');
