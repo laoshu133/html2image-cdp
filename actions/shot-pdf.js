@@ -5,8 +5,11 @@
 const fsp = require('fs-extra');
 const Promise = require('bluebird');
 
-// const pxToMM = require('../lib/px-to-mm');
 const ShotAction = require('./shot');
+
+// TODO: Don't know why
+// https://bugs.chromium.org/p/chromium/issues/detail?id=741049
+const CHROME_DEFAULT_API = 937;
 
 class ShotPdf extends ShotAction {
     async main() {
@@ -14,22 +17,27 @@ class ShotPdf extends ShotAction {
         const cfg = this.config;
         const pdfOptions = cfg.pdfOptions;
         const result = {
-            pdf: null
+            pdf: null,
+            scale: 1
         };
 
+        const dpi = pdfOptions.dpi || 300;
+        if(dpi !== CHROME_DEFAULT_API) {
+            result.scale = dpi / CHROME_DEFAULT_API;
+
+            pdfOptions.scale = result.scale;
+        }
+
         this.log(`page.pdf`, {
-            pdfOptions: cfg.pdfOptions
+            pdfOptions
         });
 
         if(!pdfOptions.width && !pdfOptions.height) {
             const elem = await page.$(cfg.wrapSelector);
             const rect = await elem.boundingBox();
 
-            const width = rect.width;
-            const height = rect.height;
-
-            // pdfOptions.width = `${pxToMM(width)}mm`;
-            // pdfOptions.height = `${pxToMM(height) + 0.05}mm`;
+            const width = rect.width * result.scale;
+            const height = rect.height * result.scale;
 
             // @TODO: 未知原因，需要增加偏移，否则会多出一页
             pdfOptions.height = Math.round(height) + 1;

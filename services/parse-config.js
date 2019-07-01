@@ -105,7 +105,8 @@ module.exports = cfg => {
         if(cfg.action === 'shotpdf') {
             const pdfOptions = Object.assign({
                 preferCSSPageSize: false,
-                printBackground: true
+                printBackground: true,
+                dpi: 300
             }, cfg.pdfOptions || {});
 
             delete pdfOptions.path;
