@@ -9,6 +9,7 @@ const Promise = require('bluebird');
 
 const BaseAction = require('./base');
 const mergeImages = require('../lib/merge-images');
+const changeImageDPI = require('../lib/change-image-dpi');
 const clearTimeoutShots = require('../services/clear-timeout-shots');
 
 const cpuCount = require('os').cpus().length;
@@ -196,6 +197,15 @@ class ShotAction extends BaseAction {
                 }
 
                 return ret;
+            })
+            // Set output DPI
+            .tap(image => {
+                const dpi = cfg.dpi;
+                if(dpi <= 72) {
+                    return;
+                }
+
+                image.buffer = changeImageDPI(image.buffer, dpi, `image/${imageType}`);
             })
             .then(({ buffer, shotRect }) => {
                 buffer.type = `image/${imageType}`;
