@@ -18,6 +18,8 @@ module.exports = {
     imageQuality: 90, // 图片质量 1-100
     imageSize: null, // 图片大小，裁剪位置 {width, height, position}
 
+    dpi: 72, // 输出 DPI
+
     pdfOptions: null, // pdf 导出配置
 
     viewport: null, // 视图宽度，格式 [width, height], 默认 null

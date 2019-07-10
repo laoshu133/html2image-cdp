@@ -101,6 +101,9 @@ module.exports = cfg => {
             cfg.wrapMaxCount = 1;
         }
 
+        // Output dpi
+        cfg.dpi = parseInt(cfg.dpi, 10) || 72;
+
         // Pdf limit
         if(cfg.action === 'shotpdf') {
             const pdfOptions = Object.assign({
