@@ -53,6 +53,8 @@ curl -H "Content-type: application/json" -X POST -d '{"url":"http://meiyaapp.com
     imageQuality: 90, // 图片质量 1-100
     imageSize: null, // 图片大小，裁剪位置 {width, height, position}
 
+    dpi: null, // 输出 DPI，PDF 默认 300，图片默认 72
+
     pdfOptions: null, // pdf 导出配置，参见 Puppeteer page.pdf 文档
 
     viewport: null, // 视图宽度，格式 [width, height], 默认 null
