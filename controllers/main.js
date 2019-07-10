@@ -113,6 +113,8 @@ module.exports = router => {
         }
         else if(ret.pdf) {
             result.pdf = pathToUrl(ret.pdf, ctx);
+            result.pdfScale = ret.pdfScale;
+            result.scale = ret.scale;
         }
 
         // ext data
