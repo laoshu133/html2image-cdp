@@ -11,30 +11,27 @@ const ShotAction = require('./shot');
 // https://bugs.chromium.org/p/chromium/issues/detail?id=741049
 const CHROME_DEFAULT_API = 937;
 
+const PDF_DEFAULT_DPI = 300;
+
 class ShotPdf extends ShotAction {
     async main() {
         const page = this.page;
         const cfg = this.config;
         const pdfOptions = cfg.pdfOptions;
         const result = {
-            pdf: null,
-            scale: 1
+            scale: cfg.dpi / PDF_DEFAULT_DPI,
+            pdfScale: 1,
+            pdf: null
         };
 
         const pdfDPI = pdfOptions.dpi || 300;
         if(pdfDPI !== CHROME_DEFAULT_API) {
-            result.scale = pdfDPI / CHROME_DEFAULT_API;
-        }
+            pdfOptions.scale = result.scale * (pdfDPI / CHROME_DEFAULT_API);
 
-        // Reset output dpi
-        if(cfg.dpi && pdfDPI !== cfg.dpi) {
-            result.scale *= cfg.dpi / pdfDPI;
-        }
+            // Limit scale is outside [0.1 - 2]
+            pdfOptions.scale = Math.max(0.1, Math.min(2, pdfOptions.scale));
 
-        // Enable pdf scale
-        if(result.scale !== 1) {
-            // scale is outside [0.1 - 2]
-            pdfOptions.scale = Math.max(0.1, Math.min(2, result.scale));
+            result.pdfScale = pdfOptions.scale;
         }
 
         this.log(`page.pdf`, {
@@ -44,9 +41,10 @@ class ShotPdf extends ShotAction {
         if(!pdfOptions.width && !pdfOptions.height) {
             const elem = await page.$(cfg.wrapSelector);
             const rect = await elem.boundingBox();
+            const scale = pdfOptions.scale;
 
-            const width = rect.width * result.scale;
-            const height = rect.height * result.scale;
+            const width = rect.width * scale;
+            const height = rect.height * scale;
 
             // @TODO: 未知原因，需要增加偏移，否则会多出一页
             pdfOptions.height = Math.round(height) + 1;
