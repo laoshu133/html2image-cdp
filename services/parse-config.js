@@ -102,7 +102,7 @@ module.exports = cfg => {
         }
 
         // Output dpi
-        cfg.dpi = parseInt(cfg.dpi, 10) || 72;
+        cfg.dpi = parseInt(cfg.dpi, 10) || (cfg.action === 'shotpdf' ? 300 : 72);
 
         // Pdf limit
         if(cfg.action === 'shotpdf') {
