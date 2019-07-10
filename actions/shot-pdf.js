@@ -21,11 +21,20 @@ class ShotPdf extends ShotAction {
             scale: 1
         };
 
-        const dpi = pdfOptions.dpi || 300;
-        if(dpi !== CHROME_DEFAULT_API) {
-            result.scale = dpi / CHROME_DEFAULT_API;
+        const pdfDPI = pdfOptions.dpi || 300;
+        if(pdfDPI !== CHROME_DEFAULT_API) {
+            result.scale = pdfDPI / CHROME_DEFAULT_API;
+        }
 
-            pdfOptions.scale = result.scale;
+        // Reset output dpi
+        if(cfg.dpi && pdfDPI !== cfg.dpi) {
+            result.scale *= cfg.dpi / pdfDPI;
+        }
+
+        // Enable pdf scale
+        if(result.scale !== 1) {
+            // scale is outside [0.1 - 2]
+            pdfOptions.scale = Math.max(0.1, Math.min(2, result.scale));
         }
 
         this.log(`page.pdf`, {
