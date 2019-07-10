@@ -18,15 +18,16 @@ class ShotPdf extends ShotAction {
         const page = this.page;
         const cfg = this.config;
         const pdfOptions = cfg.pdfOptions;
+        const pdfDPI = pdfOptions.dpi || 300;
         const result = {
             scale: cfg.dpi / PDF_DEFAULT_DPI,
+            dpiScale: pdfDPI / CHROME_DEFAULT_API,
             pdfScale: 1,
             pdf: null
         };
 
-        const pdfDPI = pdfOptions.dpi || 300;
-        if(pdfDPI !== CHROME_DEFAULT_API) {
-            pdfOptions.scale = result.scale * (pdfDPI / CHROME_DEFAULT_API);
+        if(result.scale !== 1 || result.dpiScale !== 1) {
+            pdfOptions.scale = result.dpiScale / result.scale;
 
             // Limit scale is outside [0.1 - 2]
             pdfOptions.scale = Math.max(0.1, Math.min(2, pdfOptions.scale));
@@ -35,7 +36,8 @@ class ShotPdf extends ShotAction {
         }
 
         this.log(`page.pdf`, {
-            pdfOptions
+            pdfOptions,
+            ...result
         });
 
         if(!pdfOptions.width && !pdfOptions.height) {
