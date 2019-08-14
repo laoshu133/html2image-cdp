@@ -128,7 +128,7 @@ class ShotAction extends BaseAction {
                 }
             });
 
-            if(viewWidth > cfg.maxImageWidth || viewHeight > cfg.maxImageHeight) {
+            if((viewWidth * viewHeight) > (cfg.maxImageWidth * cfg.maxImageHeight)) {
                 const maxSize = `${cfg.maxImageWidth}x${cfg.maxImageHeight}`;
                 const msg = `Request Image size is out of limit: ${maxSize}`;
 
