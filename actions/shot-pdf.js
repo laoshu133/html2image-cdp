@@ -49,8 +49,8 @@ class ShotPdf extends ShotAction {
             const height = rect.height * scale;
 
             // @TODO: 未知原因，需要增加偏移，否则会多出一页
-            pdfOptions.height = Math.round(height) + 1;
-            pdfOptions.width = Math.round(width);
+            pdfOptions.height = Math.ceil(height) + 1;
+            pdfOptions.width = Math.ceil(width);
 
             this.log('page.pdf.getPageSize.done', {
                 height: pdfOptions.height,
