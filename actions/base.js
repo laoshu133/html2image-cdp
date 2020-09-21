@@ -80,6 +80,7 @@ class BaseAction extends EventEmitter {
     }
 
     async setRequestInterception() {
+        const { requestInterceptor } = this.options;
         const page = this.page;
 
         if(!page || !requestInterceptor.hasInterception()) {
