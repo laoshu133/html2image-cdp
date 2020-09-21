@@ -1,28 +1,32 @@
 FROM ubuntu:16.04
-LABEL maintainer "admin@laoshu133.com"
+LABEL maintainer "xiaomi@gaoding.com"
 
-# Expose
-EXPOSE 3007
+# 基础环境配置
+ARG PORT=3007
+ARG TZ=Asia/Shanghai
+ARG NODE_ENV=production
+ARG APP_INSTALL_DIR=/usr/src/app
 
-# Health check
-HEALTHCHECK --timeout=20s \
-  CMD curl --silent --fail localhost:3007/status || exit 1
+# ALINODE 监控平台
+# ARG ALINODE_APP_SECRET
+# ARG ALINODE_APP_ID
+
+ENV TZ $TZ
+ENV PORT $PORT
+ENV NODE_ENV $NODE_ENV
+WORKDIR ${APP_INSTALL_DIR}
 
 # libvips
 ENV LIBVIPS_VERSION 8.5.5
 
-# alinode-v3.8.4 with Node.js v8.9.4
-ENV ALINODE_VERSION 3.8.4
-ENV TNVM_DIR /root/.tnvm
+# Expose
+EXPOSE ${PORT}
 
-# Update PATH
-ENV PATH $TNVM_DIR/versions/alinode/v$ALINODE_VERSION/bin:$PATH
+# Health check
+HEALTHCHECK --timeout=10s \
+  CMD curl --silent --fail localhost:${PORT} || exit 1
 
-# Use "bash" as replacement for	"sh"
-# https://github.com/moby/moby/issues/8100#issue-43075601
-RUN rm /bin/sh && ln -sf /bin/bash /bin/sh
-
-# Install dependencies
+# Install base deps
 RUN \
   apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -30,7 +34,9 @@ RUN \
   gobject-introspection gtk-doc-tools libglib2.0-dev libpng12-dev \
   libwebp-dev libtiff5-dev libgif-dev libexif-dev libxml2-dev libjpeg-turbo8-dev libpoppler-glib-dev \
   swig libmagickwand-dev libpango1.0-dev libmatio-dev libopenslide-dev libcfitsio3-dev \
-  libgsf-1-dev fftw3-dev liborc-0.4-dev librsvg2-dev
+  libgsf-1-dev fftw3-dev liborc-0.4-dev librsvg2-dev && \
+  curl https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 -Lo /usr/bin/dumb-init && \
+  chmod +x /usr/bin/dumb-init
 
 # Install libvips
 RUN \
@@ -43,20 +49,32 @@ RUN \
   make install && \
   ldconfig
 
-# Install tnvm
+# Install Node.js with alinode
+# alinode-v4.7.2 with Node.js v10.15.3
+ENV ALINODE_VERSION 4.7.2
+ENV TNVM_DIR /root/.tnvm
+# ENV TNVM_BASEURL https://raw.githubusercontent.com/aliyun-node/tnvm/master
+ENV TNVM_BASEURL https://gitee.com/laoshu133/tnvm/raw/master
+ENV NVM_SOURCE_URL ${TNVM_BASEURL}/tnvm.sh
+
+# Update PATH
+ENV PATH $TNVM_DIR/versions/alinode/v$ALINODE_VERSION/bin:$PATH
+
+# Use "bash" as replacement for	"sh"
+# https://github.com/moby/moby/issues/8100#issue-43075601
+RUN rm /bin/sh && ln -sf /bin/bash /bin/sh
+
+# Install tnvm, Node.js
 RUN \
-  wget -O- https://raw.githubusercontent.com/aliyun-node/tnvm/master/install.sh | bash && \
-  # source $HOME/.bashrc && \
+  bash -c "$(curl -fsSL ${TNVM_BASEURL}/install.sh)" && \
   . $TNVM_DIR/tnvm.sh && \
   tnvm install alinode-v$ALINODE_VERSION && \
   tnvm use alinode-v$ALINODE_VERSION
 
-# Install node deps
+# Install Node.js global deps
 RUN \
-  # npm, agentx, commandx
-  # npm install -g npm && \
-  npm install -g agentx commandx && \
-  npm install
+  echo "registry=https://registry.npm.taobao.org/" > ~/.npmrc && \
+  npm install -g yarn @alicloud/agenthub
 
 # Clean up
 RUN \
@@ -67,8 +85,16 @@ RUN \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Init app
-COPY . /usr/src/app
-WORKDIR /usr/src/app
-ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD [ "npm", "start" ]
+
+# Copy files
+COPY . .
+
+# 安装应用
+RUN ./docker-entrypoint.sh install
+
+# 应用启动
+ENTRYPOINT ["dumb-init", "--", "./docker-entrypoint.sh"]
+CMD [ "start" ]
+
+# 应用停止
+#CMD [ "./docker-entrypoint.sh", "stop" ]
