@@ -73,7 +73,23 @@ const requestInterceptor = {
         }
 
         if(ret !== false) {
-            return req.continue(ret || {});
+            ret = ret || {};
+
+            const headers = ret.headers = req.headers() || {};
+
+            // Force set X-Real-URL for debug
+            headers['X-Real-URL'] = req.url();
+
+            // Force set Origin for cors request
+            if(!headers['origin']) {
+                const rOrigin = /^\w+:\/\/([^/?&]+)/;
+                const pageURL = req.frame().url() || headers['referer'] || '';
+                const pageOrigin = rOrigin.test(pageURL) ? RegExp.$1 : 'http://localhost';
+
+                headers['origin'] = pageOrigin;
+            }
+
+            return req.continue(ret);
         }
 
         return req.abort('blockedbyclient');

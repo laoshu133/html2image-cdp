@@ -80,22 +80,27 @@ class BaseAction extends EventEmitter {
     }
 
     async setRequestInterception() {
-        const { requestInterceptor } = this.options;
-        const page = this.page;
+        const { page, options } = this;
+        const { requestInterceptor } = options;
 
         if(!page || !requestInterceptor.hasInterception()) {
             return;
         }
 
-        page.on('request', req => {
+        const requestHandler = req => {
             return requestInterceptor.interceptRequest(req);
-        });
+        };
 
         // RequestInterception
         await page.setRequestInterception(true);
 
-        // Re-enable page caching
+        // Try re-enable page caching
         await page.setCacheEnabled(true);
+
+        page.on('request', requestHandler);
+        page.once('close', () => {
+            page.off('request', requestHandler);
+        });
 
         this.log('page.setRequestInterception.done');
     }
