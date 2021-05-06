@@ -33,7 +33,7 @@
     "koa-favicon": "^2.0.1",
     "koa-onerror": "^4.1.0",
     "koa-router": "^7.4.0",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.21",
     "puppeteer": "^1.9.0",
     "sharp": "^0.21.0"
   },
