@@ -35,7 +35,7 @@
     "koa-router": "^7.4.0",
     "lodash": "^4.17.11",
     "puppeteer": "^1.9.0",
-    "sharp": "^0.21.0"
+    "sharp": "^0.30.5"
   },
   "devDependencies": {
     "jest": "^24.7.1"
